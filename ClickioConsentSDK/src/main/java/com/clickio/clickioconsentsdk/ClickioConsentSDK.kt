@@ -89,7 +89,7 @@ class ClickioConsentSDK private constructor() {
          * Description from client's documentation:
          * Return IAB TCF v2.2 string if exists
          */
-        fun getTCString(): String {
+        fun getTCString(): String? {
             TODO()
         }
 
@@ -97,7 +97,7 @@ class ClickioConsentSDK private constructor() {
          * Description from client's documentation:
          * Return the Google additional consent ID if exists
          */
-        fun getACString(): String {
+        fun getACString(): String? {
             TODO()
         }
 
@@ -105,7 +105,7 @@ class ClickioConsentSDK private constructor() {
          * Description from client's documentation:
          * Return Global Privacy Platform String if exists
          */
-        fun getGPPString(): String {
+        fun getGPPString(): String?{
             TODO()
         }
 
@@ -113,7 +113,7 @@ class ClickioConsentSDK private constructor() {
          * Description from client's documentation:
          *  Return Google Consent Mode v2 flags
          */
-        fun getGoogleConsentModeV2(): String {
+        fun getGoogleConsentModeV2(): String? {
             TODO()
         }
 
@@ -121,7 +121,7 @@ class ClickioConsentSDK private constructor() {
          * Description from client's documentation:
          * Return id's of TCF Vendors that given consent
          */
-        fun getConsentedTCFVendors(): List<Int> {
+        fun getConsentedTCFVendors(): List<Int>? {
             TODO()
         }
 
@@ -129,7 +129,7 @@ class ClickioConsentSDK private constructor() {
          * Description from client's documentation:
          * Return id's of TCF Vendors that given consent for legitimate interests
          */
-        fun getConsentedTCFLiVendors(): List<Int> {
+        fun getConsentedTCFLiVendors(): List<Int>? {
             TODO()
         }
 
@@ -137,7 +137,7 @@ class ClickioConsentSDK private constructor() {
          * Description from client's documentation:
          * Return id's of TCF purposes that given consent
          */
-        fun getConsentedTCFPurposes(): List<Int> {
+        fun getConsentedTCFPurposes(): List<Int>? {
             TODO()
         }
 
@@ -145,7 +145,7 @@ class ClickioConsentSDK private constructor() {
          * Description from client's documentation:
          * Return id's of TCF purposes that given consent as Legitimate Interest
          */
-        fun getConsentedTCFLiPurposes(): List<Int> {
+        fun getConsentedTCFLiPurposes(): List<Int>? {
             TODO()
         }
 
@@ -153,7 +153,7 @@ class ClickioConsentSDK private constructor() {
          * Description from client's documentation:
          * Return id's of Google Vendors that given consent
          */
-        fun getConsentedGoogleVendors(): List<Int> {
+        fun getConsentedGoogleVendors(): List<Int>? {
             TODO()
         }
 
@@ -161,7 +161,7 @@ class ClickioConsentSDK private constructor() {
          * Description from client's documentation:
          * Return id's of non-TCF Vendors that given consent
          */
-        fun getConsentedOtherVendors(): List<Int> {
+        fun getConsentedOtherVendors(): List<Int>? {
             TODO()
         }
 
@@ -169,7 +169,7 @@ class ClickioConsentSDK private constructor() {
          * Description from client's documentation:
          * Return id's of non-TCF Vendors that given consent for legitimate interests
          */
-        fun getConsentedOtherLiVendors(): List<Int> {
+        fun getConsentedOtherLiVendors(): List<Int>? {
             TODO()
         }
 
@@ -177,7 +177,7 @@ class ClickioConsentSDK private constructor() {
          * Description from client's documentation:
          * Return id's of non-TCF purposes (simplified purposes) that given consent
          */
-        fun getConsentedNonTcfPurposes(): List<Int> {
+        fun getConsentedNonTcfPurposes(): List<Int>? {
             TODO()
         }
     }
@@ -255,14 +255,14 @@ class ClickioConsentSDK private constructor() {
      * Description from client's documentation:
      * Verifies whether consent for a specific purpose has been granted.
      */
-    fun checkConsentForPurpose(purposeId: String): Boolean {
+    fun checkConsentForPurpose(purposeId: String): Boolean? {
         TODO()
     }
 
     /**
      * Verifies whether consent for a specific vendor has been granted.
      */
-    fun checkConsentForVendor(vendorId: String): Boolean {
+    fun checkConsentForVendor(vendorId: String): Boolean? {
         TODO()
     }
 
