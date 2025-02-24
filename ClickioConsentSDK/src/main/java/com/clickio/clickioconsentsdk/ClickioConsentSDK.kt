@@ -32,9 +32,6 @@ class ClickioConsentSDK private constructor() {
     private var onReadyListener: (() -> Unit)? = null
     private var consentStatus: ConsentStatus? = null
 
-    class ClickioInitError(reason: String) :
-        Throwable("Something went wrong during the initialization of ClickioConsentSDK: {$reason}")
-
     data class Config(
         val siteId: String,
         val appLanguage: String? = null,
@@ -44,8 +41,7 @@ class ClickioConsentSDK private constructor() {
         NOT_APPLICABLE,
         GDPR_NO_DECISION,
         GDPR_DECISION_OBTAINED,
-        US,
-        NOT_DEFINED
+        US
     }
 
     enum class DialogMode {
@@ -222,7 +218,16 @@ class ClickioConsentSDK private constructor() {
      * Description from client's documentation:
      * Return the scope that applies to the user (return the sdk/consent-status scope output).
      */
-    fun checkConsentScope(): String = consentStatus.scope
+    fun checkConsentScope(): String? {
+        if (consentStatus?.scope == null) {
+            logger.log(
+                "Consent status is not loaded, possible reason:${consentStatus?.error}",
+                EventLogger.EventLevel.ERROR
+            )
+        }
+        return consentStatus?.scope
+    }
+
 
     /**
      * Description from client's documentation:
@@ -232,13 +237,18 @@ class ClickioConsentSDK private constructor() {
      * gdpr_decision_obtained - scope = gdpr and force = false
      * us - scope = us
      */
-    fun checkConsentState(): ConsentState {
+    fun checkConsentState(): ConsentState? {
+        if (consentStatus?.scope == null) {
+            logger.log(
+                "Consent status is not loaded, possible reason:${consentStatus?.error}",
+                EventLogger.EventLevel.ERROR
+            )
+        }
         if (consentStatus?.scope == SCOPE_OUT_OF_SCOPE) return ConsentState.NOT_APPLICABLE
         if (consentStatus?.scope == SCOPE_GDPR && consentStatus?.force == true) return ConsentState.GDPR_NO_DECISION
         if (consentStatus?.scope == SCOPE_GDPR && consentStatus?.force == false) return ConsentState.GDPR_DECISION_OBTAINED
         if (consentStatus?.scope == SCOPE_US) return ConsentState.US
-        // For cases when scope from sdk/consent-status not described
-        return ConsentState.NOT_DEFINED
+        return null
     }
 
     /**
@@ -294,10 +304,6 @@ class ClickioConsentSDK private constructor() {
      * Private method to fetch the current ConsentStatus
      */
     private fun fetchConsentStatus(): ConsentStatus {
-        if (config == null) {
-            logger.log("Missed configuration", EventLogger.EventLevel.ERROR)
-            throw ClickioInitError("Timeout exception") // Just example
-        }
         // Calling GET https://clickiocdn.com/sdk/consent-status?s={config.clientId}&v={sharedPreferences.CLICKIO_CONSENT_server_request}
         // Getting Scope(GDPR, US, OUT_OF_SCOPE), force (True/False), error - parsing to ConsentStatus model
         return ConsentStatus()
