@@ -1,17 +1,24 @@
 package com.clickio.clickioconsentsdk
 
 import android.content.Context
-import android.util.Log
+import android.content.Intent
+import android.os.Handler
+import android.os.Looper
+import android.preference.PreferenceManager
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.concurrent.Executors
 
 class ClickioConsentSDK private constructor() {
 
     companion object {
 
-        private const val CLICKIO_SDK_TAG = "CLICKIO_SDK"
-
         private const val SCOPE_GDPR = "gdpr"
         private const val SCOPE_US = "us"
         private const val SCOPE_OUT_OF_SCOPE = "out_of_scope"
+        private const val BASE_CONSENT_STATUS_URL = "https://clickiocdn.com/sdk/consent-status?"
+        private const val VERSION_KEY = "CLICKIO_CONSENT_server_request"
 
         private var instance: ClickioConsentSDK? = null
 
@@ -26,6 +33,7 @@ class ClickioConsentSDK private constructor() {
         }
     }
 
+    private var isReady: Boolean = false
     private var config: Config? = null
     private var logger: EventLogger = EventLogger()
     private var onConsentUpdatedListener: (() -> Unit)? = null
@@ -50,145 +58,12 @@ class ClickioConsentSDK private constructor() {
     }
 
     /**
-     *  Logging class
-     */
-    class EventLogger {
-
-        enum class Mode {
-            DISABLED,
-            VERBOSE
-        }
-
-        enum class EventLevel {
-            ERROR,
-            DEBUG,
-            INFO
-        }
-
-        private var mode: Mode = Mode.DISABLED
-
-        fun setMode(mode: Mode) {
-            this.mode = mode
-        }
-
-        fun log(event: String, level: EventLevel) {
-            when (level) {
-                EventLevel.ERROR -> Log.e(CLICKIO_SDK_TAG, event)
-                EventLevel.DEBUG -> Log.d(CLICKIO_SDK_TAG, event)
-                EventLevel.INFO -> Log.i(CLICKIO_SDK_TAG, event)
-            }
-        }
-    }
-
-    /**
-     * Class for Exporting Data from Prefs
-     */
-    class ExportData(val context: Context) {
-
-        /**
-         * Description from client's documentation:
-         * Return IAB TCF v2.2 string if exists
-         */
-        fun getTCString(): String? {
-            TODO()
-        }
-
-        /**
-         * Description from client's documentation:
-         * Return the Google additional consent ID if exists
-         */
-        fun getACString(): String? {
-            TODO()
-        }
-
-        /**
-         * Description from client's documentation:
-         * Return Global Privacy Platform String if exists
-         */
-        fun getGPPString(): String?{
-            TODO()
-        }
-
-        /**
-         * Description from client's documentation:
-         *  Return Google Consent Mode v2 flags
-         */
-        fun getGoogleConsentModeV2(): String? {
-            TODO()
-        }
-
-        /**
-         * Description from client's documentation:
-         * Return id's of TCF Vendors that given consent
-         */
-        fun getConsentedTCFVendors(): List<Int>? {
-            TODO()
-        }
-
-        /**
-         * Description from client's documentation:
-         * Return id's of TCF Vendors that given consent for legitimate interests
-         */
-        fun getConsentedTCFLiVendors(): List<Int>? {
-            TODO()
-        }
-
-        /**
-         * Description from client's documentation:
-         * Return id's of TCF purposes that given consent
-         */
-        fun getConsentedTCFPurposes(): List<Int>? {
-            TODO()
-        }
-
-        /**
-         * Description from client's documentation:
-         * Return id's of TCF purposes that given consent as Legitimate Interest
-         */
-        fun getConsentedTCFLiPurposes(): List<Int>? {
-            TODO()
-        }
-
-        /**
-         * Description from client's documentation:
-         * Return id's of Google Vendors that given consent
-         */
-        fun getConsentedGoogleVendors(): List<Int>? {
-            TODO()
-        }
-
-        /**
-         * Description from client's documentation:
-         * Return id's of non-TCF Vendors that given consent
-         */
-        fun getConsentedOtherVendors(): List<Int>? {
-            TODO()
-        }
-
-        /**
-         * Description from client's documentation:
-         * Return id's of non-TCF Vendors that given consent for legitimate interests
-         */
-        fun getConsentedOtherLiVendors(): List<Int>? {
-            TODO()
-        }
-
-        /**
-         * Description from client's documentation:
-         * Return id's of non-TCF purposes (simplified purposes) that given consent
-         */
-        fun getConsentedNonTcfPurposes(): List<Int>? {
-            TODO()
-        }
-    }
-
-    /**
      * Data class for sdk/consent-status response
      */
     data class ConsentStatus(
-        val scope: String,
-        val force: Boolean,
-        val error: String,
+        val scope: String?,
+        val force: Boolean?,
+        val error: String?,
     )
 
     // Common methods
@@ -196,18 +71,19 @@ class ClickioConsentSDK private constructor() {
     /**
      *  Init of SDK
      */
-    fun initialize(config: Config) {
+    fun initialize(context: Context, config: Config) {
+        logger.log("Initialization stared", EventLevel.INFO)
         this.config = config
-        consentStatus = fetchConsentStatus()
-        onReadyListener?.invoke()
+        fetchConsentStatus(context)
     }
 
-    fun setLogsMode(mode: EventLogger.Mode) {
+    fun setLogsMode(mode: LogsMode) {
         logger.setMode(mode)
     }
 
     fun onReady(listener: () -> Unit) {
         this.onReadyListener = listener
+        if (isReady) listener.invoke()
     }
 
     fun onConsentUpdated(listener: (() -> Unit)?) {
@@ -222,12 +98,11 @@ class ClickioConsentSDK private constructor() {
         if (consentStatus?.scope == null) {
             logger.log(
                 "Consent status is not loaded, possible reason:${consentStatus?.error}",
-                EventLogger.EventLevel.ERROR
+                EventLevel.ERROR
             )
         }
         return consentStatus?.scope
     }
-
 
     /**
      * Description from client's documentation:
@@ -241,9 +116,10 @@ class ClickioConsentSDK private constructor() {
         if (consentStatus?.scope == null) {
             logger.log(
                 "Consent status is not loaded, possible reason:${consentStatus?.error}",
-                EventLogger.EventLevel.ERROR
+                EventLevel.ERROR
             )
         }
+        // TODO ask about what to do, when "force" is missing (when calling status with "version" getting only {"scope":"gdpr"})
         if (consentStatus?.scope == SCOPE_OUT_OF_SCOPE) return ConsentState.NOT_APPLICABLE
         if (consentStatus?.scope == SCOPE_GDPR && consentStatus?.force == true) return ConsentState.GDPR_NO_DECISION
         if (consentStatus?.scope == SCOPE_GDPR && consentStatus?.force == false) return ConsentState.GDPR_DECISION_OBTAINED
@@ -256,14 +132,16 @@ class ClickioConsentSDK private constructor() {
      * Verifies whether consent for a specific purpose has been granted.
      */
     fun checkConsentForPurpose(purposeId: String): Boolean? {
-        TODO()
+        // TODO implement
+        return null
     }
 
     /**
      * Verifies whether consent for a specific vendor has been granted.
      */
     fun checkConsentForVendor(vendorId: String): Boolean? {
-        TODO()
+        // TODO implement
+        return null
     }
 
 
@@ -276,44 +154,79 @@ class ClickioConsentSDK private constructor() {
      * Argument “language” (optional) - force UI language
      */
     fun openDialog(
-        context: Context, // Android specific
-        mode: DialogMode = DialogMode.DEFAULT,
-        language: String? = null
+        context: Context,
+        mode: DialogMode = DialogMode.DEFAULT
     ) {
         when (mode) {
             DialogMode.DEFAULT -> {
-                if (consentStatus?.scope == SCOPE_GDPR && consentStatus?.force == true) openWebViewActivity()
+                if (consentStatus?.scope == SCOPE_GDPR && consentStatus?.force == true) openWebViewActivity(
+                    context
+                )
             }
 
             DialogMode.RESURFACE -> {
-                if (consentStatus?.scope != SCOPE_OUT_OF_SCOPE) openWebViewActivity()
+                if (consentStatus?.scope != SCOPE_OUT_OF_SCOPE) openWebViewActivity(context)
+            }
+        }
+    }
+
+    internal fun getConfig() = config
+
+    internal fun getConsentUpdatedCallback() = onConsentUpdatedListener
+
+    internal fun getLogger() = logger
+
+    /**
+     * Private method to fetch the current ConsentStatus
+     */
+    private fun fetchConsentStatus(context: Context) {
+        logger.log("Fetching status", EventLevel.INFO)
+        val siteId = config?.siteId
+        val consentVersion: String? =
+            PreferenceManager.getDefaultSharedPreferences(context).getString(VERSION_KEY, null)
+        logger.log("Saved Consent Version $consentVersion", EventLevel.INFO)
+        val executor = Executors.newSingleThreadExecutor()
+        executor.execute {
+            try {
+                var urlString = BASE_CONSENT_STATUS_URL.plus("s=$siteId")
+                consentVersion?.let {
+                    urlString = urlString.plus("&v=$it")
+                }
+                val url = URL(urlString)
+
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connect()
+                val responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+
+                    val json = JSONObject(response)
+                    logger.log("Server response is OK", EventLevel.INFO)
+                    logger.log(json.toString(), EventLevel.INFO)
+                    consentStatus = ConsentStatus(
+                        scope = if (json.has("scope")) json.optString("scope") else null,
+                        force = if (json.has("force")) json.optBoolean("force") else null,
+                        error = if (json.has("error")) json.optString("error") else null
+                    )
+                    isReady = true
+                    Handler(Looper.getMainLooper()).post {
+                        onReadyListener?.invoke()
+                    }
+                } else {
+                    logger.log("Server response is not OK", EventLevel.ERROR)
+                }
+            } catch (e: Exception) {
+                logger.log(e.message.toString(), EventLevel.INFO)
+                e.printStackTrace()
             }
         }
     }
 
     /**
-     * Description from client's documentation:
-     * Clears all consent data, effectively simulating the complete removal of the app from the device.
-     */
-    private fun clearData() {
-        // Wiping of SharedPreferences
-        // Available only for SDK developers for debugging
-    }
-
-    /**
-     * Private method to fetch the current ConsentStatus
-     */
-    private fun fetchConsentStatus(): ConsentStatus {
-        // Calling GET https://clickiocdn.com/sdk/consent-status?s={config.clientId}&v={sharedPreferences.CLICKIO_CONSENT_server_request}
-        // Getting Scope(GDPR, US, OUT_OF_SCOPE), force (True/False), error - parsing to ConsentStatus model
-        return ConsentStatus()
-    }
-
-    /**
      *  Private method to open Screen with WebView
      */
-    private fun openWebViewActivity() {
-        // Launch a transparent activity with WebView to which we pass config, onConsentUpdated callback, logger
-        // In this Activity we do not forget to read/write/ready realization
+    private fun openWebViewActivity(context: Context) {
+        context.startActivity(Intent(context, ClickioWebActivity::class.java))
     }
 }
