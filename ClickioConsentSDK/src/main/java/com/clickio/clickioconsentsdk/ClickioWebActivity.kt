@@ -4,16 +4,21 @@ import android.annotation.SuppressLint
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.preference.PreferenceManager
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
+import androidx.preference.PreferenceManager
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -27,8 +32,6 @@ internal class ClickioWebActivity : AppCompatActivity() {
     private var webView: WebView? = null
     private var isWriteCalled: Boolean = false
     private val sharedPreferences by lazy {
-        //  TODO check about deprecation,
-        //  Perhaps - implementation("androidx.preference:preference-ktx:1.1.1")
         PreferenceManager.getDefaultSharedPreferences(this)
     }
     private val backPressedCallback = object : OnBackPressedCallback(true) {
@@ -36,6 +39,7 @@ internal class ClickioWebActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         createTransparentViewWithWebView()
         configureWebView()
@@ -49,10 +53,14 @@ internal class ClickioWebActivity : AppCompatActivity() {
 
     @JavascriptInterface
     fun ready() {
-        //TODO figure out: whether webView need somehow to be cleaned (I suppose - no)
-        logger.log("JS method [READY] was called", EventLevel.INFO)
-        if (isWriteCalled) consentUpdatedCallback?.invoke()
-        finish()
+        Handler(Looper.getMainLooper()).post {
+            webView?.clearCache(true)
+            webView?.clearHistory()
+            logger.log("JS method [READY] was called", EventLevel.INFO)
+            ClickioConsentSDK.getInstance().updateConsentStatus()
+            if (isWriteCalled) consentUpdatedCallback?.invoke()
+            finish()
+        }
     }
 
     @JavascriptInterface
@@ -74,26 +82,35 @@ internal class ClickioWebActivity : AppCompatActivity() {
             EventLevel.INFO
         )
         isWriteCalled = true
-        synchronized(this) { // TODO perhaps no need
-            try {
-                val jsonObject = JSONObject(jsonString)
-                val editor = sharedPreferences.edit()
-
-                jsonObject.keys().forEach { key ->
-                    when (val value = jsonObject.get(key)) {
-                        is String -> editor.putString(key, value)
-                        is Int -> editor.putInt(key, value)
-                        is Boolean -> editor.putBoolean(key, value)
-                        is Float -> editor.putFloat(key, value)
-                        is Long -> editor.putLong(key, value)
-                        else -> editor.putString(key, value.toString())
+        synchronized(this) {
+            logger.log(
+                "Started parsing of the json",
+                EventLevel.DEBUG
+            )
+            val jsonObject = JSONObject(jsonString)
+            with(sharedPreferences.edit()) {
+                try {
+                    jsonObject.keys().forEach { key ->
+                        val value = jsonObject.get(key)
+                        logger.log("$key $value", EventLevel.DEBUG)
+                        when (value) {
+                            is String -> putString(key, value)
+                            is Int -> putInt(key, value)
+                            is Boolean -> putBoolean(key, value)
+                            is Float -> putFloat(key, value)
+                            is Long -> putLong(key, value)
+                            else -> putString(key, value.toString())
+                        }
                     }
+                } catch (e: JSONException) {
+                    logger.log("JSON parse error: ${e.message}", EventLevel.ERROR)
+                    return false
                 }
-
-                editor.apply()
-            } catch (e: JSONException) {
-                logger.log("JSON parse error: ${e.message}", EventLevel.ERROR)
-                return false
+                logger.log(
+                    "Successfully finished parsing of the json",
+                    EventLevel.DEBUG
+                )
+                apply()
             }
         }
         return true
@@ -102,8 +119,8 @@ internal class ClickioWebActivity : AppCompatActivity() {
     private fun createTransparentViewWithWebView() {
         window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         window.setFlags(
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         )
 
         val rootLayout = FrameLayout(this).apply {
@@ -115,6 +132,17 @@ internal class ClickioWebActivity : AppCompatActivity() {
         }
 
         setContentView(rootLayout)
+
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, windowInsets ->
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                leftMargin = insets.left
+                bottomMargin = insets.bottom
+                rightMargin = insets.right
+                topMargin = insets.top
+            }
+            WindowInsetsCompat.CONSUMED
+        }
 
         webView = WebView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -138,7 +166,6 @@ internal class ClickioWebActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun configureWebView() {
         webView?.apply {
-            webViewClient = WebViewClient()
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             addJavascriptInterface(this@ClickioWebActivity, "clickioSDK")

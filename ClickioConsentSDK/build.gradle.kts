@@ -34,6 +34,8 @@ android {
 
 dependencies {
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.preference.ktx)
+    implementation(libs.androidx.activity.ktx)
 }
 
 publishing {

@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
-import android.preference.PreferenceManager
+import androidx.preference.PreferenceManager
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -39,6 +39,7 @@ class ClickioConsentSDK private constructor() {
     private var onConsentUpdatedListener: (() -> Unit)? = null
     private var onReadyListener: (() -> Unit)? = null
     private var consentStatus: ConsentStatus? = null
+    private var exportData: ExportData? = null
 
     data class Config(
         val siteId: String,
@@ -61,9 +62,9 @@ class ClickioConsentSDK private constructor() {
      * Data class for sdk/consent-status response
      */
     data class ConsentStatus(
-        val scope: String?,
-        val force: Boolean?,
-        val error: String?,
+        val scope: String? = null,
+        val force: Boolean? = null,
+        val error: String? = null,
     )
 
     // Common methods
@@ -74,6 +75,7 @@ class ClickioConsentSDK private constructor() {
     fun initialize(context: Context, config: Config) {
         logger.log("Initialization stared", EventLevel.INFO)
         this.config = config
+        exportData = ExportData(context)
         fetchConsentStatus(context)
     }
 
@@ -119,7 +121,6 @@ class ClickioConsentSDK private constructor() {
                 EventLevel.ERROR
             )
         }
-        // TODO ask about what to do, when "force" is missing (when calling status with "version" getting only {"scope":"gdpr"})
         if (consentStatus?.scope == SCOPE_OUT_OF_SCOPE) return ConsentState.NOT_APPLICABLE
         if (consentStatus?.scope == SCOPE_GDPR && consentStatus?.force == true) return ConsentState.GDPR_NO_DECISION
         if (consentStatus?.scope == SCOPE_GDPR && consentStatus?.force == false) return ConsentState.GDPR_DECISION_OBTAINED
@@ -131,18 +132,14 @@ class ClickioConsentSDK private constructor() {
      * Description from client's documentation:
      * Verifies whether consent for a specific purpose has been granted.
      */
-    fun checkConsentForPurpose(purposeId: String): Boolean? {
-        // TODO implement
-        return null
-    }
+    fun checkConsentForPurpose(purposeId: Int): Boolean? =
+        exportData?.getConsentedTCFPurposes()?.contains(purposeId)
 
     /**
      * Verifies whether consent for a specific vendor has been granted.
      */
-    fun checkConsentForVendor(vendorId: String): Boolean? {
-        // TODO implement
-        return null
-    }
+    fun checkConsentForVendor(vendorId: Int): Boolean? =
+        exportData?.getConsentedTCFVendors()?.contains(vendorId)
 
 
     // WebView Screen Manipulations
@@ -176,15 +173,20 @@ class ClickioConsentSDK private constructor() {
 
     internal fun getLogger() = logger
 
+    internal fun updateConsentStatus() {
+        // TODO not sure that it is best way
+        consentStatus = consentStatus?.copy(force = false)
+    }
+
     /**
      * Private method to fetch the current ConsentStatus
      */
     private fun fetchConsentStatus(context: Context) {
-        logger.log("Fetching status", EventLevel.INFO)
         val siteId = config?.siteId
         val consentVersion: String? =
             PreferenceManager.getDefaultSharedPreferences(context).getString(VERSION_KEY, null)
-        logger.log("Saved Consent Version $consentVersion", EventLevel.INFO)
+        logger.log("Saved Consent Version $consentVersion", EventLevel.DEBUG)
+        logger.log("Fetching status", EventLevel.DEBUG)
         val executor = Executors.newSingleThreadExecutor()
         executor.execute {
             try {
@@ -199,26 +201,32 @@ class ClickioConsentSDK private constructor() {
                 connection.connect()
                 val responseCode = connection.responseCode
                 if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    logger.log("The server returned response code \"OK\"", EventLevel.DEBUG)
 
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
                     val json = JSONObject(response)
-                    logger.log("Server response is OK", EventLevel.INFO)
-                    logger.log(json.toString(), EventLevel.INFO)
+                    logger.log("Starting parsing returned json: $json", EventLevel.DEBUG)
+
                     consentStatus = ConsentStatus(
                         scope = if (json.has("scope")) json.optString("scope") else null,
-                        force = if (json.has("force")) json.optBoolean("force") else null,
-                        error = if (json.has("error")) json.optString("error") else null
+                        force = if (json.has("force")) json.optBoolean("force") else false,
                     )
                     isReady = true
+                    logger.log(
+                        "Success parsing of json: ${consentStatus.toString()}",
+                        EventLevel.DEBUG
+                    )
                     Handler(Looper.getMainLooper()).post {
+                        logger.log("Calling onReady", EventLevel.DEBUG)
                         onReadyListener?.invoke()
                     }
+                    logger.log("Initialization finished", EventLevel.INFO)
                 } else {
+                    // TODO implement error handling
                     logger.log("Server response is not OK", EventLevel.ERROR)
                 }
             } catch (e: Exception) {
-                logger.log(e.message.toString(), EventLevel.INFO)
-                e.printStackTrace()
+                logger.log(e.message.toString(), EventLevel.ERROR)
             }
         }
     }

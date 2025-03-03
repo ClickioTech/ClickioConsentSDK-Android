@@ -1,7 +1,7 @@
 package com.clickio.clickioconsentsdk
 
 import android.content.Context
-import android.preference.PreferenceManager
+import androidx.preference.PreferenceManager
 import org.json.JSONArray
 
 /**
@@ -10,68 +10,59 @@ import org.json.JSONArray
 class ExportData(context: Context) {
 
     private val sharedPreferences =
-        PreferenceManager.getDefaultSharedPreferences(context)//  TODO check about deprecation
+        PreferenceManager.getDefaultSharedPreferences(context)
 
     /**
-     * Description from client's documentation:
      * Return IAB TCF v2.2 string if exists
      */
     fun getTCString(): String? =
         sharedPreferences.getString("IABTCF_TCString", null)
 
     /**
-     * Description from client's documentation:
      * Return the Google additional consent ID if exists
      */
     fun getACString(): String? =
         sharedPreferences.getString("IABTCF_AddtlConsent", null)
 
     /**
-     * Description from client's documentation:
      * Return Global Privacy Platform String if exists
      */
     fun getGPPString(): String? =
         sharedPreferences.getString("IABGPP_HDR_GppString", null)
 
     /**
-     * Description from client's documentation:
+     *  Description from client's documentation:
      *  Return Google Consent Mode v2 flags
      */
-    fun getGoogleConsentMode(): Map<String, String> {
-        // TODO recheck implementation
-        return sharedPreferences.all
-            .filterKeys { it.startsWith("CLICKIO_CONSENT_GOOGLE_ANALYTICS_") }
-            .mapValues { it.value.toString() }
+    fun getGoogleConsentMode(): Map<String, String>? {
+        // TODO
+        return null
     }
 
-    fun getConsentedTCFVendors(): List<Int>? {
-        // TODO recheck implementation
-        return parseBinaryString(sharedPreferences.getString("IABTCF_VendorConsents", null))
-    }
+    /**
+     * Return id's of TCF Vendors that given consent
+     */
+    fun getConsentedTCFVendors(): List<Int>? =
+        parseBinaryString(sharedPreferences.getString("IABTCF_VendorConsents", null))
 
-    fun getConsentedTCFLiVendors(): List<Int>? {
-        return parseBinaryString(
-            sharedPreferences.getString(
-                "IABTCF_VendorLegitimateInterests",
-                null
-            )
-        )
-    }
 
-    fun getConsentedTCFPurposes(): List<Int>? {
-        // TODO recheck implementation
-        return parseBinaryString(sharedPreferences.getString("IABTCF_PurposeConsents", null))
-    }
+    /**
+     * Return id's of TCF Vendors that given consent for legitimate interests
+     */
+    fun getConsentedTCFLiVendors(): List<Int>? =
+        parseBinaryString(sharedPreferences.getString("IABTCF_VendorLegitimateInterests", null))
 
-    fun getConsentedTCFLiPurposes(): List<Int>? {
-        // TODO recheck implementation
-        return parseBinaryString(
-            sharedPreferences.getString(
-                "IABTCF_PurposeLegitimateInterests",
-                null
-            )
-        )
-    }
+    /**
+     * Return id's of TCF purposes that given consent
+     */
+    fun getConsentedTCFPurposes(): List<Int>? =
+        parseBinaryString(sharedPreferences.getString("IABTCF_PurposeConsents", null))
+
+    /**
+     * Return id's of TCF purposes that given consent as Legitimate Interest
+     */
+    fun getConsentedTCFLiPurposes(): List<Int>? =
+        parseBinaryString(sharedPreferences.getString("IABTCF_PurposeLegitimateInterests", null))
 
     fun getConsentedGoogleVendors(): List<Int>? {
         // TODO recheck implementation
@@ -110,11 +101,10 @@ class ExportData(context: Context) {
         )
     }
 
-    private fun parseBinaryString(binaryString: String?): List<Int>? {
-        return binaryString?.mapIndexedNotNull { index, char ->
+    private fun parseBinaryString(binaryString: String?): List<Int>? =
+        binaryString?.mapIndexedNotNull { index, char ->
             if (char == '1') index + 1 else null
         }
-    }
 
     private fun parseJsonArray(jsonString: String?): List<Int>? {
         return try {
