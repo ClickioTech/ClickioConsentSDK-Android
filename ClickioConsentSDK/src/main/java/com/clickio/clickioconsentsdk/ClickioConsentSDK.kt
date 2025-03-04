@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.preference.PreferenceManager
 import org.json.JSONObject
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
@@ -99,7 +100,7 @@ class ClickioConsentSDK private constructor() {
     fun checkConsentScope(): String? {
         if (consentStatus?.scope == null) {
             logger.log(
-                "Consent status is not loaded, possible reason:${consentStatus?.error}",
+                "Consent status is not loaded, possible reason: ${consentStatus?.error}",
                 EventLevel.ERROR
             )
         }
@@ -117,7 +118,7 @@ class ClickioConsentSDK private constructor() {
     fun checkConsentState(): ConsentState? {
         if (consentStatus?.scope == null) {
             logger.log(
-                "Consent status is not loaded, possible reason:${consentStatus?.error}",
+                "Consent status is not loaded, possible reason: ${consentStatus?.error}",
                 EventLevel.ERROR
             )
         }
@@ -154,6 +155,14 @@ class ClickioConsentSDK private constructor() {
         context: Context,
         mode: DialogMode = DialogMode.DEFAULT
     ) {
+        logger.log("openDialog called with mode $mode", level = EventLevel.INFO)
+        if (consentStatus?.scope == null) {
+            logger.log(
+                "Consent status is not loaded, possible reason: ${consentStatus?.error}",
+                EventLevel.ERROR
+            )
+            return
+        }
         when (mode) {
             DialogMode.DEFAULT -> {
                 if (consentStatus?.scope == SCOPE_GDPR && consentStatus?.force == true) openWebViewActivity(
@@ -182,51 +191,56 @@ class ClickioConsentSDK private constructor() {
      * Private method to fetch the current ConsentStatus
      */
     private fun fetchConsentStatus(context: Context) {
+        logger.log("Fetching status", EventLevel.DEBUG)
         val siteId = config?.siteId
         val consentVersion: String? =
             PreferenceManager.getDefaultSharedPreferences(context).getString(VERSION_KEY, null)
         logger.log("Saved Consent Version $consentVersion", EventLevel.DEBUG)
-        logger.log("Fetching status", EventLevel.DEBUG)
+
         val executor = Executors.newSingleThreadExecutor()
         executor.execute {
             try {
                 var urlString = BASE_CONSENT_STATUS_URL.plus("s=$siteId")
-                consentVersion?.let {
-                    urlString = urlString.plus("&v=$it")
-                }
-                val url = URL(urlString)
+                consentVersion?.let { urlString = urlString.plus("&v=$it") }
 
-                val connection = url.openConnection() as HttpURLConnection
+                val connection = URL(urlString).openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connect()
-                val responseCode = connection.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    logger.log("The server returned response code \"OK\"", EventLevel.DEBUG)
 
-                    val response = connection.inputStream.bufferedReader().use { it.readText() }
-                    val json = JSONObject(response)
+
+                val response = try {
+                    connection.inputStream.bufferedReader().use { it.readText() }
+                } catch (e: IOException) {
+                    connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "{}"
+                }
+
+                val json = JSONObject(response)
+
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    logger.log("The server returned response code \"OK\"", EventLevel.DEBUG)
                     logger.log("Starting parsing returned json: $json", EventLevel.DEBUG)
 
                     consentStatus = ConsentStatus(
-                        scope = if (json.has("scope")) json.optString("scope") else null,
-                        force = if (json.has("force")) json.optBoolean("force") else false,
+                        scope = json.optString("scope", null),
+                        force = json.optBoolean("force", false),
                     )
                     isReady = true
-                    logger.log(
-                        "Success parsing of json: ${consentStatus.toString()}",
-                        EventLevel.DEBUG
-                    )
                     Handler(Looper.getMainLooper()).post {
                         logger.log("Calling onReady", EventLevel.DEBUG)
                         onReadyListener?.invoke()
                     }
-                    logger.log("Initialization finished", EventLevel.INFO)
-                } else {
-                    // TODO implement error handling
-                    logger.log("Server response is not OK", EventLevel.ERROR)
+                    return@execute
                 }
+
+                logger.log(
+                    "Server response is not OK: ${connection.responseCode}",
+                    EventLevel.ERROR
+                )
+                logger.log("Error response json: $json", EventLevel.DEBUG)
+                consentStatus = ConsentStatus(error = json.optString("error"))
+
             } catch (e: Exception) {
-                logger.log(e.message.toString(), EventLevel.ERROR)
+                logger.log("Exception occurred: ${e.message}", EventLevel.ERROR)
             }
         }
     }

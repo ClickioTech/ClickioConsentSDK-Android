@@ -165,6 +165,7 @@ internal class ClickioWebActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun configureWebView() {
+        //TODO Add handling of errors
         webView?.apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
