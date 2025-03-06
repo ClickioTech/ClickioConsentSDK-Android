@@ -2,7 +2,8 @@ package com.clickio.clickioconsentsdk
 
 import android.content.Context
 import androidx.preference.PreferenceManager
-import org.json.JSONArray
+
+private const val GRANTED = "granted"
 
 /**
  * Class for Exporting Data from Prefs
@@ -34,9 +35,22 @@ class ExportData(context: Context) {
      *  Description from client's documentation:
      *  Return Google Consent Mode v2 flags
      */
-    fun getGoogleConsentMode(): Map<String, String>? {
-        // TODO
-        return null
+    fun getGoogleConsentMode(): GoogleConsentStatus {
+        val adStorageString =
+            sharedPreferences.getString("CLICKIO_CONSENT_GOOGLE_ANALYTICS_adStorage", null)
+        val analyticsStorageString =
+            sharedPreferences.getString("CLICKIO_CONSENT_GOOGLE_ANALYTICS_analyticsStorage", null)
+        val adUserDataString =
+            sharedPreferences.getString("CLICKIO_CONSENT_GOOGLE_ANALYTICS_adUserData", null)
+        val adPersonalizationString =
+            sharedPreferences.getString("CLICKIO_CONSENT_GOOGLE_ANALYTICS_adPersonalization", null)
+
+        return GoogleConsentStatus(
+            adStorageGranted = adStorageString == GRANTED,
+            analyticsStorageGranted = analyticsStorageString == GRANTED,
+            adUserDataGranted = adUserDataString == GRANTED,
+            adPersonalizationGranted = adPersonalizationString == GRANTED
+        )
     }
 
     /**
@@ -65,54 +79,50 @@ class ExportData(context: Context) {
         parseBinaryString(sharedPreferences.getString("IABTCF_PurposeLegitimateInterests", null))
 
     fun getConsentedGoogleVendors(): List<Int>? {
-        // TODO recheck implementation
         val consentString = sharedPreferences.getString("IABTCF_AddtlConsent", null) ?: return null
         val parts = consentString.split("~")
         return if (parts.size > 1) parts[1].split(".").mapNotNull { it.toIntOrNull() } else null
     }
 
-    fun getConsentedOtherVendors(): List<Int>? {
-        // TODO recheck implementation
-        return parseJsonArray(
-            sharedPreferences.getString(
-                "CLICKIO_CONSENT_other_vendors_consent",
-                null
-            )
-        )
-    }
-
-    fun getConsentedOtherLiVendors(): List<Int>? {
-        // TODO recheck implementation
-        return parseJsonArray(
-            sharedPreferences.getString(
-                "CLICKIO_CONSENT_other_vendors_leg_int",
-                null
-            )
-        )
-    }
-
-    fun getConsentedNonTcfPurposes(): List<Int>? {
-        // TODO recheck implementation
-        return parseJsonArray(
-            sharedPreferences.getString(
-                "CLICKIO_CONSENT_other_purposes_consent",
-                null
-            )
-        )
-    }
-
-    private fun parseBinaryString(binaryString: String?): List<Int>? =
-        binaryString?.mapIndexedNotNull { index, char ->
-            if (char == '1') index + 1 else null
-        }
-
-    private fun parseJsonArray(jsonString: String?): List<Int>? {
-        return try {
-            jsonString?.let { JSONArray(it) }?.let { jsonArray ->
-                List(jsonArray.length()) { index -> jsonArray.getInt(index) }
-            }
-        } catch (e: Exception) {
+    /**
+     * Return id's of non-TCF Vendors that given consent
+     */
+    fun getConsentedOtherVendors(): List<Int>? =
+        sharedPreferences.getString(
+            "CLICKIO_CONSENT_other_vendors_consent",
             null
+        )?.split(",")?.mapNotNull { it.toIntOrNull() }
+
+    /**
+     * Return id's of non-TCF Vendors that given consent for legitimate interests
+     */
+    fun getConsentedOtherLiVendors(): List<Int>? =
+        sharedPreferences.getString(
+            "CLICKIO_CONSENT_other_vendors_leg_int",
+            null
+        )?.split(",")?.mapNotNull { it.toIntOrNull() }
+
+    /**
+     * Return id's of non-TCF purposes (simplified purposes) that given consent
+     */
+    fun getConsentedNonTcfPurposes(): List<Int>? =
+        sharedPreferences.getString(
+            "CLICKIO_CONSENT_other_purposes_consent",
+            null
+        )?.split(",")?.mapNotNull { it.toIntOrNull() }
+
+
+    private fun parseBinaryString(binaryString: String?): List<Int>? {
+        if (binaryString.isNullOrEmpty()) return null
+        return binaryString.mapIndexedNotNull { index, char ->
+            if (char == '1') index + 1 else null
         }
     }
 }
+
+data class GoogleConsentStatus(
+    val analyticsStorageGranted: Boolean = false,
+    val adStorageGranted: Boolean = false,
+    val adUserDataGranted: Boolean = false,
+    val adPersonalizationGranted: Boolean = false
+)

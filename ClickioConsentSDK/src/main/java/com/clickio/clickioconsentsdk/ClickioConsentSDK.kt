@@ -183,7 +183,7 @@ class ClickioConsentSDK private constructor() {
     internal fun getLogger() = logger
 
     internal fun updateConsentStatus() {
-        // TODO not sure that it is best way
+        // TODO may be better way?
         consentStatus = consentStatus?.copy(force = false)
     }
 

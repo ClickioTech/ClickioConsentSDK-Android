@@ -99,6 +99,8 @@ internal class ClickioWebActivity : AppCompatActivity() {
                             is Boolean -> putBoolean(key, value)
                             is Float -> putFloat(key, value)
                             is Long -> putLong(key, value)
+                            JSONObject.NULL -> remove(key)
+                            null -> remove(key)
                             else -> putString(key, value.toString())
                         }
                     }
@@ -157,6 +159,7 @@ internal class ClickioWebActivity : AppCompatActivity() {
     }
 
     private fun getConsentUrl(): String {
+        // TODO some validation on language
         return if (config?.appLanguage.isNullOrEmpty())
             BASE_CONSENT_URL.plus("sid=${config?.siteId}")
         else
