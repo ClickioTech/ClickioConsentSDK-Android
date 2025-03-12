@@ -36,6 +36,11 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.preference.ktx)
     implementation(libs.androidx.activity.ktx)
+
+    compileOnly("com.google.firebase:firebase-analytics-ktx:21.5.0")
+    compileOnly("io.airbridge:sdk-android:2.27.1")
+    compileOnly("com.adjust.sdk:adjust-android:5.1.0")
+    compileOnly("io.branch.sdk.android:library:5.15.2")
 }
 
 publishing {
@@ -43,7 +48,7 @@ publishing {
         create<MavenPublication>("maven") {
             groupId = "com.clickio"
             artifactId = "clickioconsentsdk"
-            version = "0.0.1"
+            version = "0.0.2"
 
             afterEvaluate {
                 from(components["release"])

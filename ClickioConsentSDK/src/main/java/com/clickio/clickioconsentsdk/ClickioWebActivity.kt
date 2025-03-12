@@ -159,7 +159,6 @@ internal class ClickioWebActivity : AppCompatActivity() {
     }
 
     private fun getConsentUrl(): String {
-        // TODO some validation on language
         return if (config?.appLanguage.isNullOrEmpty())
             BASE_CONSENT_URL.plus("sid=${config?.siteId}")
         else
@@ -168,7 +167,6 @@ internal class ClickioWebActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun configureWebView() {
-        //TODO Add handling of errors
         webView?.apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true

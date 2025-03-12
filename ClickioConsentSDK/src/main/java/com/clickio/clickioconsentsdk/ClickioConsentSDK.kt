@@ -5,6 +5,13 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import androidx.preference.PreferenceManager
+import co.ab180.airbridge.Airbridge
+import com.adjust.sdk.Adjust
+import com.adjust.sdk.AdjustThirdPartySharing
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.ktx.analytics
+import com.google.firebase.ktx.Firebase
+import io.branch.referral.Branch
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -78,6 +85,7 @@ class ClickioConsentSDK private constructor() {
         this.config = config
         exportData = ExportData(context)
         fetchConsentStatus(context)
+        setConsentsIfApplicable()
     }
 
     fun setLogsMode(mode: LogsMode) {
@@ -183,9 +191,97 @@ class ClickioConsentSDK private constructor() {
     internal fun getLogger() = logger
 
     internal fun updateConsentStatus() {
-        // TODO may be better way?
         consentStatus = consentStatus?.copy(force = false)
+        setConsentsIfApplicable()
     }
+
+    private fun setConsentsIfApplicable() {
+        if (!isGoogleConsentModeIntegrationEnabled()) return
+        if (isFirebaseAnalyticsAvailable()) setConsentsToFirebaseAnalytics()
+        if (isAirBridgeAvailable()) setConsentsToAirbridge()
+        if (isAdjustAvailable()) setConsentsToAdjust()
+        if (isBranchAvailable()) setConsentsBranch()
+    }
+
+    private fun isGoogleConsentModeIntegrationEnabled(): Boolean =
+        exportData?.getGoogleConsentMode() == null
+
+    private fun mapToFirebaseConsentStatus(isGranted: Boolean?) =
+        if (isGranted == true) FirebaseAnalytics.ConsentStatus.GRANTED else FirebaseAnalytics.ConsentStatus.DENIED
+
+    private fun setConsentsToFirebaseAnalytics() {
+        val consent = exportData?.getGoogleConsentMode()
+        Firebase.analytics.setConsent(
+            mapOf(
+                FirebaseAnalytics.ConsentType.AD_STORAGE to
+                        mapToFirebaseConsentStatus(consent?.adStorageGranted),
+                FirebaseAnalytics.ConsentType.ANALYTICS_STORAGE to
+                        mapToFirebaseConsentStatus(consent?.analyticsStorageGranted),
+                FirebaseAnalytics.ConsentType.AD_USER_DATA to
+                        mapToFirebaseConsentStatus(consent?.adUserDataGranted),
+                FirebaseAnalytics.ConsentType.AD_PERSONALIZATION to
+                        mapToFirebaseConsentStatus(consent?.adPersonalizationGranted)
+            )
+        )
+    }
+
+    private fun setConsentsToAirbridge() {
+        val consent = exportData?.getGoogleConsentMode()
+
+        val eeaValue = if (consentStatus?.scope == SCOPE_GDPR) "1" else "0"
+        val adPersonalizationValue = if (consent?.adPersonalizationGranted == true) "1" else "0"
+        val adUserDataValue = if (consent?.adUserDataGranted == true) "1" else "0"
+
+        Airbridge.setDeviceAlias("eea", eeaValue)
+        Airbridge.setDeviceAlias("adPersonalization", adPersonalizationValue)
+        Airbridge.setDeviceAlias("adUserData", adUserDataValue)
+    }
+
+    private fun setConsentsToAdjust() {
+        val consent = exportData?.getGoogleConsentMode()
+
+        val eeaValue = if (consentStatus?.scope == SCOPE_GDPR) "1" else "0"
+        val adPersonalizationValue = if (consent?.adPersonalizationGranted == true) "1" else "0"
+        val adUserDataValue = if (consent?.adUserDataGranted == true) "1" else "0"
+
+        val adjustThirdPartySharing = AdjustThirdPartySharing(true)
+        with(adjustThirdPartySharing) {
+            addGranularOption("google_dma", "eea", eeaValue)
+            addGranularOption("google_dma", "ad_personalization", adPersonalizationValue)
+            addGranularOption("google_dma", "ad_user_data", adUserDataValue)
+        }
+        Adjust.trackThirdPartySharing(adjustThirdPartySharing)
+    }
+
+    private fun setConsentsBranch() {
+        val consent = exportData?.getGoogleConsentMode()
+
+        val eeaValue = consentStatus?.scope == SCOPE_GDPR
+        val adPersonalizationValue = consent?.adPersonalizationGranted == true
+        val adUserDataValue = consent?.adUserDataGranted == true
+
+        Branch.getInstance().setDMAParamsForEEA(eeaValue, adPersonalizationValue, adUserDataValue)
+    }
+
+    private fun isFirebaseAnalyticsAvailable(): Boolean =
+        isClassAvailable("com.google.firebase.analytics.FirebaseAnalytics")
+
+    private fun isAirBridgeAvailable(): Boolean =
+        isClassAvailable("co.ab180.airbridge.Airbridge")
+
+    private fun isAdjustAvailable(): Boolean =
+        isClassAvailable("com.adjust.sdk.Adjust")
+
+    private fun isBranchAvailable(): Boolean =
+        isClassAvailable("io.branch.referral.Branch")
+
+    private fun isClassAvailable(className: String): Boolean =
+        try {
+            Class.forName(className)
+            true
+        } catch (e: ClassNotFoundException) {
+            false
+        }
 
     /**
      * Private method to fetch the current ConsentStatus
@@ -205,8 +301,9 @@ class ClickioConsentSDK private constructor() {
 
                 val connection = URL(urlString).openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
+                connection.connectTimeout = 15000
+                connection.readTimeout = 15000
                 connection.connect()
-
 
                 val response = try {
                     connection.inputStream.bufferedReader().use { it.readText() }

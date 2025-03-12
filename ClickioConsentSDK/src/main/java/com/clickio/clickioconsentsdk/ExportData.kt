@@ -35,7 +35,7 @@ class ExportData(context: Context) {
      *  Description from client's documentation:
      *  Return Google Consent Mode v2 flags
      */
-    fun getGoogleConsentMode(): GoogleConsentStatus {
+    fun getGoogleConsentMode(): GoogleConsentStatus? {
         val adStorageString =
             sharedPreferences.getString("CLICKIO_CONSENT_GOOGLE_ANALYTICS_adStorage", null)
         val analyticsStorageString =
@@ -44,6 +44,8 @@ class ExportData(context: Context) {
             sharedPreferences.getString("CLICKIO_CONSENT_GOOGLE_ANALYTICS_adUserData", null)
         val adPersonalizationString =
             sharedPreferences.getString("CLICKIO_CONSENT_GOOGLE_ANALYTICS_adPersonalization", null)
+
+        if (adStorageString == null && analyticsStorageString == null && adUserDataString == null && adPersonalizationString == null) return null
 
         return GoogleConsentStatus(
             adStorageGranted = adStorageString == GRANTED,
@@ -121,8 +123,8 @@ class ExportData(context: Context) {
 }
 
 data class GoogleConsentStatus(
-    val analyticsStorageGranted: Boolean = false,
-    val adStorageGranted: Boolean = false,
-    val adUserDataGranted: Boolean = false,
-    val adPersonalizationGranted: Boolean = false
+    val analyticsStorageGranted: Boolean?,
+    val adStorageGranted: Boolean?,
+    val adUserDataGranted: Boolean?,
+    val adPersonalizationGranted: Boolean?
 )
