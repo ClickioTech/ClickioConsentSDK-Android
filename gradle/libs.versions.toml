@@ -1,7 +1,7 @@
 [versions]
 activityKtx = "1.10.1"
 agp = "8.8.2"
-kotlin = "1.9.0"
+kotlin = "1.9.25"
 appcompat = "1.7.0"
 preferenceKtx = "1.2.1"
 

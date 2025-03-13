@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.clickio.clickioconsentsdk"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         minSdk = 26
@@ -35,7 +35,7 @@ android {
 dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.preference.ktx)
-    implementation(libs.androidx.activity.ktx)
+
 
     compileOnly("com.google.firebase:firebase-analytics-ktx:21.5.0")
     compileOnly("io.airbridge:sdk-android:2.27.1")

@@ -3,17 +3,18 @@ package com.clickio.clickioconsentsdk
 import android.annotation.SuppressLint
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
+import android.view.Window
+import android.view.WindowInsetsController
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -39,7 +40,6 @@ internal class ClickioWebActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         createTransparentViewWithWebView()
         configureWebView()
@@ -67,7 +67,6 @@ internal class ClickioWebActivity : AppCompatActivity() {
     fun read(key: String?): String? {
         logger.log("JS method [READ] was called with key:$key", EventLevel.INFO)
         if (key.isNullOrEmpty()) {
-            logger.log("Attempted to read with null or empty key", EventLevel.ERROR)
             return null
         }
         val value = sharedPreferences.getString(key, null)
@@ -83,10 +82,6 @@ internal class ClickioWebActivity : AppCompatActivity() {
         )
         isWriteCalled = true
         synchronized(this) {
-            logger.log(
-                "Started parsing of the json",
-                EventLevel.DEBUG
-            )
             val jsonObject = JSONObject(jsonString)
             with(sharedPreferences.edit()) {
                 try {
@@ -119,11 +114,21 @@ internal class ClickioWebActivity : AppCompatActivity() {
     }
 
     private fun createTransparentViewWithWebView() {
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
         window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-        )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+        } else {
+            window.decorView.systemUiVisibility = (
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    )
+        }
+
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
 
         val rootLayout = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -156,6 +161,20 @@ internal class ClickioWebActivity : AppCompatActivity() {
         }
 
         rootLayout.addView(webView)
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val controller = window.insetsController
+            controller?.setSystemBarsAppearance(
+                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        }
     }
 
     private fun getConsentUrl(): String {

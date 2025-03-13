@@ -287,22 +287,20 @@ class ClickioConsentSDK private constructor() {
      * Private method to fetch the current ConsentStatus
      */
     private fun fetchConsentStatus(context: Context) {
-        logger.log("Fetching status", EventLevel.DEBUG)
+        logger.log("Started fetching consent status", EventLevel.DEBUG)
         val siteId = config?.siteId
         val consentVersion: String? =
             PreferenceManager.getDefaultSharedPreferences(context).getString(VERSION_KEY, null)
-        logger.log("Saved Consent Version $consentVersion", EventLevel.DEBUG)
-
         val executor = Executors.newSingleThreadExecutor()
         executor.execute {
             try {
                 var urlString = BASE_CONSENT_STATUS_URL.plus("s=$siteId")
                 consentVersion?.let { urlString = urlString.plus("&v=$it") }
-
+                logger.log("Fetching URL: $urlString", EventLevel.DEBUG)
                 val connection = URL(urlString).openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
-                connection.connectTimeout = 15000
-                connection.readTimeout = 15000
+                connection.connectTimeout = 10000
+                connection.readTimeout = 10000
                 connection.connect()
 
                 val response = try {
