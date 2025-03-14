@@ -1,6 +1,7 @@
 package com.clickio.clickioconsentsdk
 
 import android.content.Context
+import android.util.Log
 import androidx.preference.PreferenceManager
 
 private const val GRANTED = "granted"
@@ -45,7 +46,7 @@ class ExportData(context: Context) {
         val adPersonalizationString =
             sharedPreferences.getString("CLICKIO_CONSENT_GOOGLE_ANALYTICS_adPersonalization", null)
 
-        if (adStorageString == null && analyticsStorageString == null && adUserDataString == null && adPersonalizationString == null) return null
+        if (adStorageString.isNullOrEmpty() && analyticsStorageString.isNullOrEmpty() && adUserDataString.isNullOrEmpty() && adPersonalizationString.isNullOrEmpty()) return null
 
         return GoogleConsentStatus(
             adStorageGranted = adStorageString == GRANTED,

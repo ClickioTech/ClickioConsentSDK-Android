@@ -4,10 +4,12 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.preference.PreferenceManager
 import co.ab180.airbridge.Airbridge
 import com.adjust.sdk.Adjust
 import com.adjust.sdk.AdjustThirdPartySharing
+import com.adjust.sdk.LogLevel
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.ktx.Firebase
@@ -196,7 +198,10 @@ class ClickioConsentSDK private constructor() {
     }
 
     private fun setConsentsIfApplicable() {
+        logger.log("Calling setConsentsIfApplicable", EventLevel.DEBUG)
+        logger.log("isGoogleConsentModeIntegrationEnabled() = ${isGoogleConsentModeIntegrationEnabled()}", EventLevel.DEBUG)
         if (!isGoogleConsentModeIntegrationEnabled()) return
+        logger.log("isFirebaseAnalyticsAvailable() = ${isFirebaseAnalyticsAvailable()}", EventLevel.DEBUG)
         if (isFirebaseAnalyticsAvailable()) setConsentsToFirebaseAnalytics()
         if (isAirBridgeAvailable()) setConsentsToAirbridge()
         if (isAdjustAvailable()) setConsentsToAdjust()
@@ -204,12 +209,13 @@ class ClickioConsentSDK private constructor() {
     }
 
     private fun isGoogleConsentModeIntegrationEnabled(): Boolean =
-        exportData?.getGoogleConsentMode() == null
+        exportData?.getGoogleConsentMode() != null
 
     private fun mapToFirebaseConsentStatus(isGranted: Boolean?) =
         if (isGranted == true) FirebaseAnalytics.ConsentStatus.GRANTED else FirebaseAnalytics.ConsentStatus.DENIED
 
     private fun setConsentsToFirebaseAnalytics() {
+        logger.log("Setting consent to Firebase", EventLevel.INFO)
         val consent = exportData?.getGoogleConsentMode()
         Firebase.analytics.setConsent(
             mapOf(
