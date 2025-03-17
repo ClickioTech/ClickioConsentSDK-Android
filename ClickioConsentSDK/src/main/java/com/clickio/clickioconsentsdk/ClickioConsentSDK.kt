@@ -4,12 +4,12 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import androidx.preference.PreferenceManager
 import co.ab180.airbridge.Airbridge
 import com.adjust.sdk.Adjust
 import com.adjust.sdk.AdjustThirdPartySharing
-import com.adjust.sdk.LogLevel
+import com.clickio.clickioconsentsdk.ClickioConsentSDK.DialogMode.DEFAULT
+import com.clickio.clickioconsentsdk.ClickioConsentSDK.DialogMode.RESURFACE
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.ktx.Firebase
@@ -33,7 +33,7 @@ class ClickioConsentSDK private constructor() {
         private var instance: ClickioConsentSDK? = null
 
         /**
-         * Singleton instance retrieval static method
+         * @return The singleton instance of [ClickioConsentSDK].
          */
         fun getInstance(): ClickioConsentSDK {
             if (instance == null) {
@@ -51,11 +51,19 @@ class ClickioConsentSDK private constructor() {
     private var consentStatus: ConsentStatus? = null
     private var exportData: ExportData? = null
 
+    /**
+     * Configuration data class.
+     * @param siteId The site ID.
+     * @param appLanguage The optional application language.
+     */
     data class Config(
         val siteId: String,
         val appLanguage: String? = null,
     )
 
+    /**
+     * Enum representing different consent states.
+     */
     enum class ConsentState {
         NOT_APPLICABLE,
         GDPR_NO_DECISION,
@@ -63,6 +71,11 @@ class ClickioConsentSDK private constructor() {
         US
     }
 
+    /**
+     * Enum representing different dialog modes for opening the consent dialog.
+     * @property DEFAULT Default logic for opening the consent dialog.
+     * @property RESURFACE Forces the dialog to open, but only if the user's scope requires it (GDPR/US zone).
+     */
     enum class DialogMode {
         DEFAULT,
         RESURFACE
@@ -77,10 +90,10 @@ class ClickioConsentSDK private constructor() {
         val error: String? = null,
     )
 
-    // Common methods
-
     /**
-     *  Init of SDK
+     * Initializes the SDK.
+     * @param context The application context.
+     * @param config The configuration object.
      */
     fun initialize(context: Context, config: Config) {
         logger.log("Initialization stared", EventLevel.INFO)
@@ -90,22 +103,34 @@ class ClickioConsentSDK private constructor() {
         setConsentsIfApplicable()
     }
 
+    /**
+     * Sets the logging mode.
+     * @param mode The logging mode.
+     */
     fun setLogsMode(mode: LogsMode) {
         logger.setMode(mode)
     }
 
+    /**
+     * Registers a callback to be invoked when the SDK is ready.
+     * @param listener The callback function.
+     */
     fun onReady(listener: () -> Unit) {
         this.onReadyListener = listener
         if (isReady) listener.invoke()
     }
 
+    /**
+     * Registers a callback to be invoked when consent is updated.
+     * @param listener The callback function.
+     */
     fun onConsentUpdated(listener: (() -> Unit)?) {
         this.onConsentUpdatedListener = listener
     }
 
     /**
-     * Description from client's documentation:
-     * Return the scope that applies to the user (return the sdk/consent-status scope output).
+     * Returns the applicable consent scope.
+     * @return The consent scope or null if unavailable.
      */
     fun checkConsentScope(): String? {
         if (consentStatus?.scope == null) {
@@ -118,12 +143,8 @@ class ClickioConsentSDK private constructor() {
     }
 
     /**
-     * Description from client's documentation:
-     * Return:
-     * not_applicable (if scope = ‘out of scope’)
-     * gdpr_no_decision - scope = gdpr and force = true and force state is not changed during app session
-     * gdpr_decision_obtained - scope = gdpr and force = false
-     * us - scope = us
+     * Determines the consent state based on the scope and force flag.
+     * @return The [ConsentState] or null if unavailable.
      */
     fun checkConsentState(): ConsentState? {
         if (consentStatus?.scope == null) {
@@ -140,30 +161,30 @@ class ClickioConsentSDK private constructor() {
     }
 
     /**
-     * Description from client's documentation:
-     * Verifies whether consent for a specific purpose has been granted.
+     * Checks if consent for a specific purpose has been granted.
+     * @param purposeId The ID of the purpose.
+     * @return True if consent is granted, false otherwise, or null if unavailable.
      */
     fun checkConsentForPurpose(purposeId: Int): Boolean? =
         exportData?.getConsentedTCFPurposes()?.contains(purposeId)
 
     /**
-     * Verifies whether consent for a specific vendor has been granted.
+     * Checks if consent for a specific vendor has been granted.
+     * @param vendorId The ID of the vendor.
+     * @return True if consent is granted, false otherwise, or null if unavailable.
      */
     fun checkConsentForVendor(vendorId: Int): Boolean? =
         exportData?.getConsentedTCFVendors()?.contains(vendorId)
 
 
-    // WebView Screen Manipulations
     /**
-     * Description from client's documentation:
-     * Argument “mode”:
-     * Resurface - check if user in consent scope (scope != out of scope) and open the dialog
-     * Default - if scope = gdpr and force = true then open the dialog
-     * Argument “language” (optional) - force UI language
+     * Opens the consent dialog based on the specified mode.
+     * @param context Android context.
+     * @param mode The dialog mode.
      */
     fun openDialog(
         context: Context,
-        mode: DialogMode = DialogMode.DEFAULT
+        mode: DialogMode = DEFAULT
     ) {
         logger.log("openDialog called with mode $mode", level = EventLevel.INFO)
         if (consentStatus?.scope == null) {
@@ -174,13 +195,13 @@ class ClickioConsentSDK private constructor() {
             return
         }
         when (mode) {
-            DialogMode.DEFAULT -> {
+            DEFAULT -> {
                 if (consentStatus?.scope == SCOPE_GDPR && consentStatus?.force == true) openWebViewActivity(
                     context
                 )
             }
 
-            DialogMode.RESURFACE -> {
+            RESURFACE -> {
                 if (consentStatus?.scope != SCOPE_OUT_OF_SCOPE) openWebViewActivity(context)
             }
         }
@@ -198,10 +219,8 @@ class ClickioConsentSDK private constructor() {
     }
 
     private fun setConsentsIfApplicable() {
-        logger.log("Calling setConsentsIfApplicable", EventLevel.DEBUG)
-        logger.log("isGoogleConsentModeIntegrationEnabled() = ${isGoogleConsentModeIntegrationEnabled()}", EventLevel.DEBUG)
+        logger.log("Is Google Consent Mode Enabled = ${isGoogleConsentModeIntegrationEnabled()}", EventLevel.DEBUG)
         if (!isGoogleConsentModeIntegrationEnabled()) return
-        logger.log("isFirebaseAnalyticsAvailable() = ${isFirebaseAnalyticsAvailable()}", EventLevel.DEBUG)
         if (isFirebaseAnalyticsAvailable()) setConsentsToFirebaseAnalytics()
         if (isAirBridgeAvailable()) setConsentsToAirbridge()
         if (isAdjustAvailable()) setConsentsToAdjust()
@@ -229,9 +248,11 @@ class ClickioConsentSDK private constructor() {
                         mapToFirebaseConsentStatus(consent?.adPersonalizationGranted)
             )
         )
+        logger.log("Finished setting to Firebase", EventLevel.INFO)
     }
 
     private fun setConsentsToAirbridge() {
+        logger.log("Setting consent to Airbridge", EventLevel.INFO)
         val consent = exportData?.getGoogleConsentMode()
 
         val eeaValue = if (consentStatus?.scope == SCOPE_GDPR) "1" else "0"
@@ -241,9 +262,12 @@ class ClickioConsentSDK private constructor() {
         Airbridge.setDeviceAlias("eea", eeaValue)
         Airbridge.setDeviceAlias("adPersonalization", adPersonalizationValue)
         Airbridge.setDeviceAlias("adUserData", adUserDataValue)
+
+        logger.log("Finished consent to Airbridge", EventLevel.INFO)
     }
 
     private fun setConsentsToAdjust() {
+        logger.log("Setting consent to Adjust", EventLevel.INFO)
         val consent = exportData?.getGoogleConsentMode()
 
         val eeaValue = if (consentStatus?.scope == SCOPE_GDPR) "1" else "0"
@@ -257,9 +281,11 @@ class ClickioConsentSDK private constructor() {
             addGranularOption("google_dma", "ad_user_data", adUserDataValue)
         }
         Adjust.trackThirdPartySharing(adjustThirdPartySharing)
+        logger.log("Finished setting consent to Adjust", EventLevel.INFO)
     }
 
     private fun setConsentsBranch() {
+        logger.log("Setting consent to Branch", EventLevel.INFO)
         val consent = exportData?.getGoogleConsentMode()
 
         val eeaValue = consentStatus?.scope == SCOPE_GDPR
@@ -267,6 +293,7 @@ class ClickioConsentSDK private constructor() {
         val adUserDataValue = consent?.adUserDataGranted == true
 
         Branch.getInstance().setDMAParamsForEEA(eeaValue, adPersonalizationValue, adUserDataValue)
+        logger.log("Setting consent to Branch", EventLevel.INFO)
     }
 
     private fun isFirebaseAnalyticsAvailable(): Boolean =
@@ -290,7 +317,8 @@ class ClickioConsentSDK private constructor() {
         }
 
     /**
-     * Private method to fetch the current ConsentStatus
+     * Fetches the current consent status from the server.
+     * @param context The application/activity context.
      */
     private fun fetchConsentStatus(context: Context) {
         logger.log("Started fetching consent status", EventLevel.DEBUG)
@@ -347,9 +375,12 @@ class ClickioConsentSDK private constructor() {
     }
 
     /**
-     *  Private method to open Screen with WebView
+     * Opens the WebView activity for managing consent.
+     * @param context The application/activity context.
      */
     private fun openWebViewActivity(context: Context) {
-        context.startActivity(Intent(context, ClickioWebActivity::class.java))
+        val intent = Intent(context, ClickioWebActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
     }
 }

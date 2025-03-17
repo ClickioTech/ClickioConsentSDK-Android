@@ -1,14 +1,16 @@
 [versions]
-activityKtx = "1.10.1"
+adjustAndroid = "5.1.0"
 agp = "8.8.2"
+firebaseAnalyticsKtx = "21.5.0"
 kotlin = "1.9.25"
-appcompat = "1.7.0"
 preferenceKtx = "1.2.1"
+airbridge = "2.27.1"
 
 [libraries]
-androidx-activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "activityKtx" }
-androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+adjust-android = { module = "com.adjust.sdk:adjust-android", version.ref = "adjustAndroid" }
 androidx-preference-ktx = { group = "androidx.preference", name = "preference-ktx", version.ref = "preferenceKtx" }
+firebase-analytics-ktx = { module = "com.google.firebase:firebase-analytics-ktx", version.ref = "firebaseAnalyticsKtx" }
+sdk-android = { module = "io.airbridge:sdk-android", version.ref = "airbridge" }
 
 [plugins]
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

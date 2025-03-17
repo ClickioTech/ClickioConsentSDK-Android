@@ -33,13 +33,11 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.preference.ktx)
 
-
-    compileOnly("com.google.firebase:firebase-analytics-ktx:21.5.0")
-    compileOnly("io.airbridge:sdk-android:2.27.1")
-    compileOnly("com.adjust.sdk:adjust-android:5.1.0")
+    compileOnly(libs.firebase.analytics.ktx)
+    compileOnly(libs.sdk.android)
+    compileOnly(libs.adjust.android)
     compileOnly("io.branch.sdk.android:library:5.15.2")
 }
 
