@@ -2,14 +2,12 @@ package com.clickio.clickioconsentsdk
 
 import android.annotation.SuppressLint
 import android.graphics.Color
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
-import android.view.WindowInsetsController
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.widget.FrameLayout
@@ -20,6 +18,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.preference.PreferenceManager
+import com.clickio.clickioconsentsdk.utils.enableEdgeToEdge
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -41,6 +40,7 @@ internal class ClickioWebActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         createTransparentViewWithWebView()
         configureWebView()
         onBackPressedDispatcher.addCallback(this, backPressedCallback)
@@ -113,23 +113,9 @@ internal class ClickioWebActivity : AppCompatActivity() {
         return true
     }
 
-    @Suppress("DEPRECATION")
     private fun createTransparentViewWithWebView() {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         window.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(false)
-        } else {
-            window.decorView.systemUiVisibility = (
-                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    )
-        }
-
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
 
         val rootLayout = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -162,20 +148,6 @@ internal class ClickioWebActivity : AppCompatActivity() {
         }
 
         rootLayout.addView(webView)
-    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val controller = window.insetsController
-            controller?.setSystemBarsAppearance(
-                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
-                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-        }
     }
 
     private fun getConsentUrl(): String {
