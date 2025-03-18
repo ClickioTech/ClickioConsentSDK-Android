@@ -6,11 +6,10 @@ plugins {
 
 android {
     namespace = "com.clickio.clickioconsentsdk"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
-
+        minSdk = 21
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -36,9 +35,9 @@ dependencies {
     implementation(libs.androidx.preference.ktx)
 
     compileOnly(libs.firebase.analytics.ktx)
-    compileOnly(libs.sdk.android)
-    compileOnly(libs.adjust.android)
-    compileOnly("io.branch.sdk.android:library:5.15.2")
+    compileOnly(libs.airbridge)
+    compileOnly(libs.adjust)
+    compileOnly(libs.branch)
 }
 
 publishing {
@@ -46,7 +45,7 @@ publishing {
         create<MavenPublication>("maven") {
             groupId = "com.clickio"
             artifactId = "clickioconsentsdk"
-            version = "0.0.2"
+            version = "0.0.8"
 
             afterEvaluate {
                 from(components["release"])
