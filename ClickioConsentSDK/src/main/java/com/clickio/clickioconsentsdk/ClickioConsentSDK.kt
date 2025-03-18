@@ -236,52 +236,64 @@ class ClickioConsentSDK private constructor() {
     private fun setConsentsToFirebaseAnalytics() {
         logger.log("Setting consent to Firebase", EventLevel.INFO)
         val consent = exportData?.getGoogleConsentMode()
-        Firebase.analytics.setConsent(
-            mapOf(
-                FirebaseAnalytics.ConsentType.AD_STORAGE to
-                        mapToFirebaseConsentStatus(consent?.adStorageGranted),
-                FirebaseAnalytics.ConsentType.ANALYTICS_STORAGE to
-                        mapToFirebaseConsentStatus(consent?.analyticsStorageGranted),
-                FirebaseAnalytics.ConsentType.AD_USER_DATA to
-                        mapToFirebaseConsentStatus(consent?.adUserDataGranted),
-                FirebaseAnalytics.ConsentType.AD_PERSONALIZATION to
-                        mapToFirebaseConsentStatus(consent?.adPersonalizationGranted)
+        try {
+            Firebase.analytics.setConsent(
+                mapOf(
+                    FirebaseAnalytics.ConsentType.AD_STORAGE to
+                            mapToFirebaseConsentStatus(consent?.adStorageGranted),
+                    FirebaseAnalytics.ConsentType.ANALYTICS_STORAGE to
+                            mapToFirebaseConsentStatus(consent?.analyticsStorageGranted),
+                    FirebaseAnalytics.ConsentType.AD_USER_DATA to
+                            mapToFirebaseConsentStatus(consent?.adUserDataGranted),
+                    FirebaseAnalytics.ConsentType.AD_PERSONALIZATION to
+                            mapToFirebaseConsentStatus(consent?.adPersonalizationGranted)
+                )
             )
-        )
-        logger.log("Finished setting to Firebase", EventLevel.INFO)
-    }
-
-    private fun setConsentsToAirbridge() {
-        logger.log("Setting consent to Airbridge", EventLevel.INFO)
-        val consent = exportData?.getGoogleConsentMode()
-
-        val eeaValue = if (consentStatus?.scope == SCOPE_GDPR) "1" else "0"
-        val adPersonalizationValue = if (consent?.adPersonalizationGranted == true) "1" else "0"
-        val adUserDataValue = if (consent?.adUserDataGranted == true) "1" else "0"
-
-        Airbridge.setDeviceAlias("eea", eeaValue)
-        Airbridge.setDeviceAlias("adPersonalization", adPersonalizationValue)
-        Airbridge.setDeviceAlias("adUserData", adUserDataValue)
-
-        logger.log("Finished consent to Airbridge", EventLevel.INFO)
+            logger.log("Successful finished setting consent to Firebase", EventLevel.INFO)
+        } catch (e: Exception) {
+            logger.log("Failed setting consent to Firebase: $e", EventLevel.ERROR)
+        }
     }
 
     private fun setConsentsToAdjust() {
         logger.log("Setting consent to Adjust", EventLevel.INFO)
         val consent = exportData?.getGoogleConsentMode()
-
         val eeaValue = if (consentStatus?.scope == SCOPE_GDPR) "1" else "0"
         val adPersonalizationValue = if (consent?.adPersonalizationGranted == true) "1" else "0"
         val adUserDataValue = if (consent?.adUserDataGranted == true) "1" else "0"
 
-        val adjustThirdPartySharing = AdjustThirdPartySharing(true)
-        with(adjustThirdPartySharing) {
-            addGranularOption("google_dma", "eea", eeaValue)
-            addGranularOption("google_dma", "ad_personalization", adPersonalizationValue)
-            addGranularOption("google_dma", "ad_user_data", adUserDataValue)
+        try {
+            val adjustThirdPartySharing = AdjustThirdPartySharing(true)
+            with(adjustThirdPartySharing) {
+                addGranularOption("google_dma", "eea", eeaValue)
+                addGranularOption("google_dma", "ad_personalization", adPersonalizationValue)
+                addGranularOption("google_dma", "ad_user_data", adUserDataValue)
+            }
+            Adjust.trackThirdPartySharing(adjustThirdPartySharing)
+
+            logger.log("Successful finished setting consent to Adjust", EventLevel.INFO)
+        } catch (e: Exception) {
+            logger.log("Failed setting consent to Adjust: $e", EventLevel.ERROR)
         }
-        Adjust.trackThirdPartySharing(adjustThirdPartySharing)
-        logger.log("Finished setting consent to Adjust", EventLevel.INFO)
+    }
+
+    private fun setConsentsToAirbridge() {
+        logger.log("Setting consent to Airbridge", EventLevel.INFO)
+
+        val consent = exportData?.getGoogleConsentMode()
+        val eeaValue = if (consentStatus?.scope == SCOPE_GDPR) "1" else "0"
+        val adPersonalizationValue = if (consent?.adPersonalizationGranted == true) "1" else "0"
+        val adUserDataValue = if (consent?.adUserDataGranted == true) "1" else "0"
+
+        try {
+            Airbridge.setDeviceAlias("eea", eeaValue)
+            Airbridge.setDeviceAlias("adPersonalization", adPersonalizationValue)
+            Airbridge.setDeviceAlias("adUserData", adUserDataValue)
+
+            logger.log("Successful finished setting consent to Airbridge", EventLevel.INFO)
+        } catch (e: Exception) {
+            logger.log("Failed setting consent to Airbridge: $e", EventLevel.ERROR)
+        }
     }
 
     private fun setConsentsBranch() {
@@ -292,8 +304,13 @@ class ClickioConsentSDK private constructor() {
         val adPersonalizationValue = consent?.adPersonalizationGranted == true
         val adUserDataValue = consent?.adUserDataGranted == true
 
-        Branch.getInstance().setDMAParamsForEEA(eeaValue, adPersonalizationValue, adUserDataValue)
-        logger.log("Setting consent to Branch", EventLevel.INFO)
+        try {
+            Branch.getInstance()
+                .setDMAParamsForEEA(eeaValue, adPersonalizationValue, adUserDataValue)
+            logger.log("Successful finished setting consent to Branch", EventLevel.INFO)
+        } catch (e: Exception) {
+            logger.log("Failed setting consent to Branch: $e", EventLevel.ERROR)
+        }
     }
 
     private fun isFirebaseAnalyticsAvailable(): Boolean =
@@ -333,8 +350,8 @@ class ClickioConsentSDK private constructor() {
                 logger.log("Fetching URL: $urlString", EventLevel.DEBUG)
                 val connection = URL(urlString).openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
-                connection.connectTimeout = 10000
-                connection.readTimeout = 10000
+                connection.connectTimeout = 15000
+                connection.readTimeout = 15000
                 connection.connect()
 
                 val response = try {
@@ -350,7 +367,7 @@ class ClickioConsentSDK private constructor() {
                     logger.log("Starting parsing returned json: $json", EventLevel.DEBUG)
 
                     consentStatus = ConsentStatus(
-                        scope = json.optString("scope", null),
+                        scope = json.optString("scope", "").ifEmpty { null },
                         force = json.optBoolean("force", false),
                     )
                     isReady = true
