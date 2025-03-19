@@ -1,7 +1,10 @@
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     id("maven-publish")
+    id("com.vanniktech.maven.publish") version "0.31.0"
 }
 
 android {
@@ -40,20 +43,34 @@ dependencies {
     compileOnly(libs.branch)
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            groupId = "com.clickio"
-            artifactId = "clickioconsentsdk"
-            version = "0.0.8"
+mavenPublishing {
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = false)
+    signAllPublications()
+}
 
-            afterEvaluate {
-                from(components["release"])
+mavenPublishing {
+    coordinates("com.clickio", "clickioconsentsdk", "1.0.0-rc1")
+
+    pom {
+        name.set("ClickioConsentSDK")
+        description.set("A library for managing consent by Clickio")
+        url.set("https://clickio.com/")
+
+        developers {
+            developer {
+                email.set("app-dev@clickio.com")
             }
         }
-    }
 
-    repositories {
-        mavenLocal()
+        licenses {
+            license {
+                name.set("The MIT License")
+                url.set("https://opensource.org/licenses/MIT")
+            }
+        }
+
+        scm {
+            url.set("https://clickio.com/")
+        }
     }
 }
