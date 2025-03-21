@@ -7,7 +7,6 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
-import android.view.Window
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.widget.FrameLayout
@@ -114,7 +113,6 @@ internal class ClickioWebActivity : AppCompatActivity() {
     }
 
     private fun createTransparentViewWithWebView() {
-        requestWindowFeature(Window.FEATURE_NO_TITLE)
         window.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
 
         val rootLayout = FrameLayout(this).apply {
