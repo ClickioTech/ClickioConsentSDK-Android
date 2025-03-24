@@ -40,7 +40,7 @@ dependencies {
     compileOnly(libs.firebase.analytics.ktx)
     compileOnly(libs.airbridge)
     compileOnly(libs.adjust)
-    compileOnly(libs.branch)
+    compileOnly(libs.appsflyer)
 }
 
 mavenPublishing {
@@ -49,7 +49,7 @@ mavenPublishing {
 }
 
 mavenPublishing {
-    coordinates("com.clickio", "clickioconsentsdk", "1.0.0-rc1")
+    coordinates("com.clickio", "clickioconsentsdk", "1.0.0-rc3")
 
     pom {
         name.set("ClickioConsentSDK")

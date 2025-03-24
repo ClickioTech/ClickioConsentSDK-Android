@@ -8,12 +8,13 @@ import androidx.preference.PreferenceManager
 import co.ab180.airbridge.Airbridge
 import com.adjust.sdk.Adjust
 import com.adjust.sdk.AdjustThirdPartySharing
+import com.appsflyer.AppsFlyerConsent
+import com.appsflyer.AppsFlyerLib
 import com.clickio.clickioconsentsdk.ClickioConsentSDK.DialogMode.DEFAULT
 import com.clickio.clickioconsentsdk.ClickioConsentSDK.DialogMode.RESURFACE
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.ktx.Firebase
-import io.branch.referral.Branch
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -224,7 +225,7 @@ class ClickioConsentSDK private constructor() {
         if (isFirebaseAnalyticsAvailable()) setConsentsToFirebaseAnalytics()
         if (isAirBridgeAvailable()) setConsentsToAirbridge()
         if (isAdjustAvailable()) setConsentsToAdjust()
-        if (isBranchAvailable()) setConsentsBranch()
+        if (isAppsFlyerAvailable()) setConsentsToAppsFlyer()
     }
 
     private fun isGoogleConsentModeIntegrationEnabled(): Boolean =
@@ -296,20 +297,24 @@ class ClickioConsentSDK private constructor() {
         }
     }
 
-    private fun setConsentsBranch() {
-        logger.log("Setting consent to Branch", EventLevel.INFO)
+    private fun setConsentsToAppsFlyer() {
+        logger.log("Setting consent to AppsFlyer", EventLevel.INFO)
+
         val consent = exportData?.getGoogleConsentMode()
 
         val eeaValue = consentStatus?.scope == SCOPE_GDPR
         val adPersonalizationValue = consent?.adPersonalizationGranted == true
         val adUserDataValue = consent?.adUserDataGranted == true
+        val adStorageValue = consent?.adStorageGranted == true
 
         try {
-            Branch.getInstance()
-                .setDMAParamsForEEA(eeaValue, adPersonalizationValue, adUserDataValue)
-            logger.log("Successful finished setting consent to Branch", EventLevel.INFO)
+            val gdprUser = AppsFlyerConsent(
+                eeaValue, adUserDataValue, adPersonalizationValue, adStorageValue
+            )
+            AppsFlyerLib.getInstance().setConsentData(gdprUser)
+            logger.log("Successful finished setting consent to AppsFlyer", EventLevel.INFO)
         } catch (e: Exception) {
-            logger.log("Failed setting consent to Branch: $e", EventLevel.ERROR)
+            logger.log("Failed setting consent to AppsFlyer: $e", EventLevel.ERROR)
         }
     }
 
@@ -322,8 +327,8 @@ class ClickioConsentSDK private constructor() {
     private fun isAdjustAvailable(): Boolean =
         isClassAvailable("com.adjust.sdk.Adjust")
 
-    private fun isBranchAvailable(): Boolean =
-        isClassAvailable("io.branch.referral.Branch")
+    private fun isAppsFlyerAvailable(): Boolean =
+        isClassAvailable("com.appsflyer.AppsFlyerLib")
 
     private fun isClassAvailable(className: String): Boolean =
         try {
