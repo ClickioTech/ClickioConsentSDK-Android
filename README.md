@@ -1,4 +1,11 @@
 # Clickio Consent SDK for Android
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Setup and Usage](#setup-and-usage)
+- [ExportData](#exportdata)
+- [Integration with Third-Party Libraries for Google Consent Mode](#integration-with-third-party-libraries-for-google-consent-mode)
+- [Integration with Third-Party Libraries when Google Consent Mode is disabled](#integration-with-third-party-libraries-when-google-consent-mode-is-disabled)
 
 ## Requirements
 
@@ -11,8 +18,8 @@ Before integrating the SDK, ensure that your application meets the following req
 -   **Internet Permission:** The SDK requires internet access, so include the following permission in your `AndroidManifest.xml`:
 
     ```xml
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     ```
 
 ## Installation
@@ -34,6 +41,7 @@ implementation("com.clickio:clickioconsentsdk:1.0.0")
 
 Here's the minimal implementation to get started:
 
+**Make sure to replace string "Clickio Site ID" with yours [Site id](https://docs.clickio.com/books/clickio-consent-cmp/page/google-consent-mode-v2-implementation#bkmrk-access-the-template%3A)**.
 ```kotlin
 with(ClickioConsentSDK.getInstance()) {
     initialize(
@@ -42,15 +50,16 @@ with(ClickioConsentSDK.getInstance()) {
     )
     onReady { openDialog(context) }
 }
-
 ```
-In this code after successful initialization, the SDK will open the Consent Window (a transparent `Activity` with a `WebView`).
+
+
+In this code after successful initialization, the SDK will open the Consent dialog (a transparent `Activity` with a `WebView`).
 
 ## Setup and Usage
 
 ### Singleton Access
 
-All interactions with the Clickio SDK should be done using the `ClickioConsentSDK.getInstance()` method to obtain the singleton instance of the SDK
+All interactions with the Clickio SDK should be done using the `ClickioConsentSDK.getInstance()` method to obtain the singleton instance of the SDK.
 
 ### Initialization
 
@@ -60,17 +69,15 @@ To initialize the SDK, use the `initialize` method:
 ClickioConsentSDK.getInstance().initialize(context: Context, config: Config)
 ```
 
-#### Configuration Object
-
 The SDK requires a configuration object with the following parameters:
 
 ```kotlin
 data class Config(
-    val siteId: String, // Clickio Site ID
-    val appLanguage: String? = null // Optional: App language
+    val siteId: String, // Your Clickio Site ID
+    val appLanguage: String? = null // Optional, two-letter language code in ISO 639-1
 )
 ```
-
+[ISO 639-1](https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes)
 ### Handling SDK Readiness
 
 Use the `onReady` callback to execute actions once the SDK is fully loaded:
@@ -100,8 +107,8 @@ ClickioConsentSDK.getInstance().openDialog(
 
 -   **`context`** – Requires an `Activity` or `Appilcation` context.
 -   **`mode`** – Defines when the dialog should be shown. Possible values:
-  -   `DialogMode.DEFAULT` – Opens the dialog if GDPR applies and user hasn't given consent.
-  -   `DialogMode.RESURFACE` – Opens the dialog if GDPR applies.
+    -   `DialogMode.DEFAULT` – Opens the dialog if GDPR applies and user hasn't given consent.
+    -   `DialogMode.RESURFACE` – Always forces dialog to open, regardless of the user’s jurisdiction, allowing users to modify settings for GDPR compliance or to opt out under US regulations.
 
 ----------
 #### Consent Update Callback
@@ -122,8 +129,8 @@ To enable logging, use the following method:
 ClickioConsentSDK.getInstance().setLogsMode(mode: LogsMode)
 ```
 -   **`mode`** – Defines whether logging is enabled or not:
-  -   `LogsMode.DISABLED` – Default value
-  -   `LogsMode.VERBOSE` – Enables logging
+    -   `LogsMode.DISABLED` – Disables logging, default value
+    -   `LogsMode.VERBOSE` – Enables logging
 
    ----------
 
@@ -138,7 +145,7 @@ Returns the applicable consent scope as String.
 
 #### Returns:
 -   **"gdpr"** – The user is subject to GDPR requirements.
--   **"us"** – The user is subject to US (GPP National) requirements.
+-   **"us"** – The user is subject to US requirements.
 -   **"out of scope"** – The user is not subject to GDPR/US, other cases.
 
 ----------
@@ -166,32 +173,43 @@ Determines the consent state based on the scope and force flag and returns Conse
 ClickioConsentSDK.getInstance().checkConsentForPurpose(purposeId: Int): Boolean?
  ```
 
-Checks if consent has been granted for a specific purpose.
+Verifies whether consent for a specific [TCF purpose](https://iabeurope.eu/iab-europe-transparency-consent-framework-policies/#headline-24-18959) has been granted by using `IABTCF_PurposeConsents` string.
+
 
 ----------
 
 ### Checking Consent for a Vendor
 
  ```kotlin
-ClickioConsentSDK.getInstance().fun checkConsentForVendor(vendorId: Int): Boolean?
+ClickioConsentSDK.getInstance().checkConsentForVendor(vendorId: Int): Boolean?
 ```
 
-Checks if consent has been granted for a specific vendor.
+Verifies whether consent for a specific [TCF vendor](https://iabeurope.eu/vendor-list-tcf/) has been granted by using `IABTCF_VendorConsents` string.
 
 ----------
 
-# ExportData
+## ExportData
 
 `ExportData` is a class designed to retrieve consent values from `SharedPreferences`. It provides methods to obtain various types of consent, including TCF, Google Consent Mode, and others.
 
-## Constructor
+*Example of use*
+ ```kotlin
+val exportData = ExportData(context)
+val valueOfTCString = exportData.getTCString()
+val listOfconsentedTCFPurposes = exportData.getConsentedTCFPurposes()
+```
 
+### Constructor
 ```kotlin
 ExportData(context: Context)
 ```
+##### Parameters:
 
+-   **`context`**  – Requires an  `Activity`  or  `Appilcation`  context.
 
-## Methods
+----------
+
+### Methods
 
 ### `getTCString`
 
@@ -209,7 +227,7 @@ Returns the IAB TCF v2.2 string if it exists.
 fun getACString(): String?
 ```
 
-Returns the Google additional consent ID if it exists.
+Returns the Google additional consent string if it exists.
 
 ----------
 
@@ -310,7 +328,7 @@ Returns the IDs of non-TCF purposes (simplified purposes) that have given consen
 fun getGoogleConsentMode(): GoogleConsentStatus?
 ```
 
-Returns Google Consent Mode v2 flags.
+Returns Google Consent Mode v2 flags wrapped into `GoogleConsentStatus` class if Google Consent Mode enabled, otherwise will return `null`.
 
 ```kotlin
 data class GoogleConsentStatus(
@@ -328,44 +346,80 @@ Represents the status of Google Consent Mode.
 -   `adPersonalizationGranted` — Consent for ad personalization.
 
 
-# Integration with Third-Party Libraries
+# Integration with Third-Party Libraries for Google Consent Mode
 
-Clickio Consent SDK supports integration with external analytics and advertising platforms for Google Consent Mode V2:
+Clickio Consent SDK supports automatic integration with external analytics and advertising platforms for Google Consent Mode V2 if enabled:
 
 -   [Firebase Analytics](https://firebase.google.com/docs/analytics)
 -   [Adjust](https://www.adjust.com/)
 -   [Airbridge](https://www.airbridge.io/)
 -   [AppsFlyer](https://www.appsflyer.com/)
 
-### Firebase
-If Firebase Analytics is present in the project, you can set default consent values in the app's `AndroidManifest.xml` before displaying the consent window, as described [here](https://developers.google.com/tag-platform/security/guides/app-consent?consentmode=advanced&platform=android). ClickioConsentSDK will automatically send Google Consent flags to Firebase Analytics if applicable.
+### Firebase Analytics
+If the Firebase Analytics SDK is present in the project, the Clickio SDK will automatically send Google Consent flags to Firebase if *Clickio Google Consent Mode* integration **enabled**.
+
+ClickioConsentSDK transmits consent flags immediately if they were updated after showing the consent dialog (when `onConsentUpdated` is called) or during initialization if the consent has been accepted.
+
+Also you might need to set default consent values in the app's `AndroidManifest.xml` as described [here](https://developers.google.com/tag-platform/security/guides/app-consent?consentmode=advanced&platform=android#default-consent).
+
+After successfully transmitting the flags, a log message will be displayed (if logging is enabled) confirming the successful transmission. In case of an error, an error message will appear in the logs. You may need to update Firebase Analytics to a newer version in your project.
 
 ----------
 
-### Adjust
-If the Adjust SDK is present in the project, ClickioConsentSDK will automatically send Google Consent flags to Adjust if applicable.
+### Adjust,  Airbridge,  AppsFlyer
 
-----------
+If any of these SDKs (**Adjust, Airbridge, AppsFlyer**) are present in the project, `ClickioConsentSDK` will automatically send Google Consent flags to them if *Clickio Google Consent Mode* integration **enabled**.
 
-### Airbridge
-If the Airbridge SDK is present in the project, ClickioConsentSDK will automatically send Google Consent flags to Airbridge if applicable.
+However, interactions with `ClickioConsentSDK` should be performed after initializing the SDK since `ClickioConsentSDK` only transmits consent flags, while the initialization and configuration of the libraries are the responsibility of the app developer.
 
-----------
+After successfully transmitting the flags, a log message will be displayed (if logging is enabled) to confirm the successful transmission. In case of an error, an error message will appear in the logs. You may need to update the SDK you are using (Adjust, Airbridge, or AppsFlyer) to a newer version in your project.
 
-### AppsFlyer
-If the AppsFlyer SDK is present in the project, ClickioConsentSDK will automatically send Google Consent flags to Airbridge if applicable.
+## Integration with other libraries
 
-----------
-# Other libraries
+For other libraries, you can use the `getGoogleConsentMode` method from the `ExportData` class to retrieve the `GoogleConsentStatus`.
 
-For other libraries, you can use the `getGoogleConsentMode` method from the `ExportData` class to retrieve the `GoogleConsentStatus`, which includes the following fields:
+For example, you can subscribe to the `onConsentUpdated` callback and call `getGoogleConsentMode` within it.
 
 ```kotlin
-val analyticsStorageGranted: Boolean?
-val adStorageGranted: Boolean?
-val adUserDataGranted: Boolean?
-val adPersonalizationGranted: Boolean?
-
+val exportData = ExportData(context)
+ClickioConsentSDK.getInstance().onConsentUpdated { 
+	val googleConsentFlags = exportData.getGoogleConsentMode()
+	if (googleConsentFlags != null){
+		// Send values to other SDK
+	}
+}
 ```
+If you need to send consent data on each subsequent app launch, it is recommended to wait for the `onReady` callback and then call `getGoogleConsentMode`.
 
-These values indicate whether the corresponding consent options have been granted (`true`) or denied (`false`).
+**Keep in mind:** `getGoogleConsentMode` can return `null`  if Google Consent Mode is disabled or unavailable.
+
+# Integration with Third-Party libraries when Google Consent Mode is disabled
+If _Clickio Google Consent Mode_ integration is **disabled** you can set consent flags manually.
+
+*Firebase Analytics example:*
+```kotlin
+with(ClickioConsentSDK.getInstance()){ 
+	onConsentUpdated {  
+		val purpose1 = checkConsentForPurpose(1)  
+		val purpose3 = checkConsentForPurpose(3)  
+		val purpose4 = checkConsentForPurpose(4)  
+		val purpose7 = checkConsentForPurpose(7)  
+		val purpose8 = checkConsentForPurpose(8)  
+		val purpose9 = checkConsentForPurpose(9)  
+		
+		val adStorage =  if  (purpose1) ConsentStatus.GRANTED else ConsentStatus.DENIED 
+		val adUserData =  if  (purpose1 && purpose7) ConsentStatus.GRANTED else ConsentStatus.DENIED 
+		val adPersonalization =  if  (purpose3 && purpose4) ConsentStatus.GRANTED else ConsentStatus.DENIED 
+		val analyticsStorage =  if  (purpose8 && purpose9) ConsentStatus.GRANTED else ConsentStatus.DENIED 
+		
+		val consentSettings =  mapOf(
+			ConsentType.AD_STORAGE to adStorage, 
+			ConsentType.AD_USER_DATA to adUserData, 
+			ConsentType.AD_PERSONALIZATION to adPersonalization, 
+			ConsentType.ANALYTICS_STORAGE to analyticsStorage 
+		) 
+		Firebase.analytics.setConsent(consentSettings)  
+	}  
+}
+```
+[More about Consent Mode flags mapping with TCF and non-TCF purposes](https://docs.clickio.com/books/clickio-consent-cmp/page/google-consent-mode-v2-implementation#bkmrk-5.1.-tcf-mode)

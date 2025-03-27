@@ -162,7 +162,7 @@ class ClickioConsentSDK private constructor() {
     }
 
     /**
-     * Checks if consent for a specific purpose has been granted.
+     * Verifies whether consent for a specific purpose has been granted.
      * @param purposeId The ID of the purpose.
      * @return True if consent is granted, false otherwise, or null if unavailable.
      */
@@ -170,7 +170,7 @@ class ClickioConsentSDK private constructor() {
         exportData?.getConsentedTCFPurposes()?.contains(purposeId)
 
     /**
-     * Checks if consent for a specific vendor has been granted.
+     * Verifies whether consent for a specific vendor has been granted.
      * @param vendorId The ID of the vendor.
      * @return True if consent is granted, false otherwise, or null if unavailable.
      */
