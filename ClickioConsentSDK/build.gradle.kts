@@ -49,7 +49,7 @@ mavenPublishing {
 }
 
 mavenPublishing {
-    coordinates("com.clickio", "clickioconsentsdk", "1.0.0-rc3")
+    coordinates("com.clickio", "clickioconsentsdk", "1.0.0-rc4")
 
     pom {
         name.set("ClickioConsentSDK")

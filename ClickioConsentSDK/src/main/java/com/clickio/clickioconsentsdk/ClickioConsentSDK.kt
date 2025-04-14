@@ -273,7 +273,7 @@ class ClickioConsentSDK private constructor() {
             Adjust.trackThirdPartySharing(adjustThirdPartySharing)
 
             logger.log("Successful finished setting consent to Adjust", EventLevel.INFO)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             logger.log("Failed setting consent to Adjust: $e", EventLevel.ERROR)
         }
     }
@@ -292,7 +292,7 @@ class ClickioConsentSDK private constructor() {
             Airbridge.setDeviceAlias("adUserData", adUserDataValue)
 
             logger.log("Successful finished setting consent to Airbridge", EventLevel.INFO)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             logger.log("Failed setting consent to Airbridge: $e", EventLevel.ERROR)
         }
     }
@@ -313,7 +313,7 @@ class ClickioConsentSDK private constructor() {
             )
             AppsFlyerLib.getInstance().setConsentData(gdprUser)
             logger.log("Successful finished setting consent to AppsFlyer", EventLevel.INFO)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             logger.log("Failed setting consent to AppsFlyer: $e", EventLevel.ERROR)
         }
     }
