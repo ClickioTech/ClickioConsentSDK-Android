@@ -70,7 +70,9 @@ mavenPublishing {
         }
 
         scm {
-            url.set("https://clickio.com/")
+            connection.set("scm:git:git://github.com/ClickioTech/ClickioConsentSDK-Android.git")
+            developerConnection.set("scm:git:ssh://git@github.com/ClickioTech/ClickioConsentSDK-Android.git")
+            url.set("https://github.com/ClickioTech/ClickioConsentSDK-Android")
         }
     }
 }
