@@ -220,7 +220,10 @@ class ClickioConsentSDK private constructor() {
     }
 
     private fun setConsentsIfApplicable() {
-        logger.log("Is Google Consent Mode Enabled = ${isGoogleConsentModeIntegrationEnabled()}", EventLevel.DEBUG)
+        logger.log(
+            "Is Google Consent Mode Enabled = ${isGoogleConsentModeIntegrationEnabled()}",
+            EventLevel.DEBUG
+        )
         if (!isGoogleConsentModeIntegrationEnabled()) return
         if (isFirebaseAnalyticsAvailable()) setConsentsToFirebaseAnalytics()
         if (isAirBridgeAvailable()) setConsentsToAirbridge()
@@ -302,10 +305,17 @@ class ClickioConsentSDK private constructor() {
 
         val consent = exportData?.getGoogleConsentMode()
 
+        var adPersonalizationValue: Boolean? = null
+        var adUserDataValue: Boolean? = null
+        var adStorageValue: Boolean? = null
+
         val eeaValue = consentStatus?.scope == SCOPE_GDPR
-        val adPersonalizationValue = consent?.adPersonalizationGranted == true
-        val adUserDataValue = consent?.adUserDataGranted == true
-        val adStorageValue = consent?.adStorageGranted == true
+
+        if (eeaValue) {
+            adPersonalizationValue = consent?.adPersonalizationGranted == true
+            adUserDataValue = consent?.adUserDataGranted == true
+            adStorageValue = consent?.adStorageGranted == true
+        }
 
         try {
             val gdprUser = AppsFlyerConsent(
@@ -314,7 +324,16 @@ class ClickioConsentSDK private constructor() {
             AppsFlyerLib.getInstance().setConsentData(gdprUser)
             logger.log("Successful finished setting consent to AppsFlyer", EventLevel.INFO)
         } catch (e: Throwable) {
-            logger.log("Failed setting consent to AppsFlyer: $e", EventLevel.ERROR)
+            logger.log("Failed manually setting consent to AppsFlyer: $e", EventLevel.ERROR)
+
+            // The current version of the AppsFlyer library for Flutter uses an outdated version
+            // of the native library under the hood, which does not support setting manual mode.
+            try {
+                logger.log("Setting consent to AppsFlyer through TCF", EventLevel.INFO)
+                AppsFlyerLib.getInstance().enableTCFDataCollection(true)
+            } catch (e: Throwable) {
+                logger.log("Failed setting consent to AppsFlyer through TCF: $e", EventLevel.ERROR)
+            }
         }
     }
 
