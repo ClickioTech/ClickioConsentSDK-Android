@@ -34,7 +34,7 @@ Before integrating the SDK, ensure that your application meets the following req
 To integrate the SDK, add the following dependency to your project's `build.gradle` file:
 
 ```gradle
-implementation("com.clickio:clickioconsentsdk:1.0.0")
+ implementation("com.clickio:clickioconsentsdk:1.0.0-rc5")
 ```
 
 ## Quick Start
