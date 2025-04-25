@@ -1,0 +1,19 @@
+[versions]
+adjustAndroid = "5.1.0"
+appsflyer = "6.16.2"
+agp = "8.8.2"
+firebaseAnalyticsKtx = "21.5.0"
+kotlin = "1.9.25"
+preferenceKtx = "1.2.1"
+airbridge = "2.27.1"
+
+[libraries]
+adjust = { module = "com.adjust.sdk:adjust-android", version.ref = "adjustAndroid" }
+appsflyer= { module = "com.appsflyer:af-android-sdk", version.ref = "appsflyer" }
+androidx-preference-ktx = { group = "androidx.preference", name = "preference-ktx", version.ref = "preferenceKtx" }
+firebase-analytics-ktx = { module = "com.google.firebase:firebase-analytics-ktx", version.ref = "firebaseAnalyticsKtx" }
+airbridge = { module = "io.airbridge:sdk-android", version.ref = "airbridge" }
+
+[plugins]
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+android-library = { id = "com.android.library", version.ref = "agp" }
