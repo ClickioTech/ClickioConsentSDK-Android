@@ -33,7 +33,7 @@ class ClickioConsentSDK private constructor() {
 
         private const val SCOPE_GDPR = "gdpr"
         private const val SCOPE_US = "us"
-        private const val SCOPE_OUT_OF_SCOPE = "out_of_scope"
+        private const val SCOPE_OUT_OF_SCOPE = "out of scope"
         private const val BASE_CONSENT_STATUS_URL = "https://clickiocdn.com/sdk/consent-status?"
         private const val VERSION_KEY = "CLICKIO_CONSENT_server_request"
 
@@ -51,6 +51,7 @@ class ClickioConsentSDK private constructor() {
     }
 
     private var isReady: Boolean = false
+    private var isReadyCalled: Boolean = false
     private var config: Config? = null
     private var logger: EventLogger = EventLogger()
     private var onConsentUpdatedListener: (() -> Unit)? = null
@@ -128,7 +129,7 @@ class ClickioConsentSDK private constructor() {
      */
     fun onReady(listener: () -> Unit) {
         this.onReadyListener = listener
-        if (isReady) listener.invoke()
+        if (isReady) callOnReadyCallback()
     }
 
     /**
@@ -198,7 +199,7 @@ class ClickioConsentSDK private constructor() {
         mode: DialogMode = DEFAULT
     ) {
         logger.log("openDialog called with mode $mode", level = EventLevel.INFO)
-        if (!isReady || consentStatus == null){
+        if (!isReady || consentStatus == null) {
             logger.log("ClickioSDK is not ready", level = EventLevel.INFO)
             return
         }
@@ -209,15 +210,28 @@ class ClickioConsentSDK private constructor() {
             )
             return
         }
+
         when (mode) {
             DEFAULT -> {
                 if (consentStatus?.scope == SCOPE_GDPR && consentStatus?.force == true) openWebViewActivity(
                     context
-                )
+                ) else {
+                    logger.log(
+                        "Dialog not shown: decision already saved or user is located outside the EEA, GB, or CH regions",
+                        EventLevel.INFO
+                    )
+                }
             }
 
             RESURFACE -> {
-                if (consentStatus?.scope != SCOPE_OUT_OF_SCOPE) openWebViewActivity(context)
+                if (consentStatus?.scope != SCOPE_OUT_OF_SCOPE) {
+                    openWebViewActivity(context)
+                } else {
+                    logger.log(
+                        "Dialog not shown: decision already saved or user is located outside the EEA, GB, or CH regions",
+                        EventLevel.INFO
+                    )
+                }
             }
         }
     }
@@ -408,10 +422,11 @@ class ClickioConsentSDK private constructor() {
                         scope = json.optString("scope", "").ifEmpty { null },
                         force = json.optBoolean("force", false),
                     )
-                    isReady = true
+
                     Handler(Looper.getMainLooper()).post {
                         logger.log("Calling onReady", EventLevel.DEBUG)
-                        onReadyListener?.invoke()
+                        isReady = true
+                        callOnReadyCallback()
                     }
                     return@execute
                 }
@@ -456,6 +471,15 @@ class ClickioConsentSDK private constructor() {
             val networkInfo = connectivityManager.activeNetworkInfo
             @Suppress("DEPRECATION")
             networkInfo != null && networkInfo.isConnected
+        }
+    }
+
+    private fun callOnReadyCallback() {
+        synchronized(this) {
+            if (!isReadyCalled) {
+                isReadyCalled = true
+                onReadyListener?.invoke()
+            }
         }
     }
 
