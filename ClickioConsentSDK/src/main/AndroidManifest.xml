@@ -8,7 +8,7 @@
             android:name=".ClickioWebActivity"
             android:configChanges="screenLayout|orientation|screenSize|keyboard|keyboardHidden|smallestScreenSize"
             android:exported="false"
-            android:launchMode="singleTop"
+            android:launchMode="singleInstance"
             android:theme="@style/TransparentAppCompatTheme" />
     </application>
 
