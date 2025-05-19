@@ -2,6 +2,9 @@ package com.clickio.clickioconsentsdk
 
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.preference.PreferenceManager
@@ -20,6 +23,9 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
+
+internal const val INTERNET_ERROR =
+    "Bad network connection. Please ensure you are connected to the internet and try again"
 
 class ClickioConsentSDK private constructor() {
 
@@ -98,6 +104,10 @@ class ClickioConsentSDK private constructor() {
      */
     fun initialize(context: Context, config: Config) {
         logger.log("Initialization stared", EventLevel.INFO)
+        if (!isNetworkAvailable(context)) {
+            logger.log(INTERNET_ERROR, EventLevel.ERROR)
+            return
+        }
         this.config = config
         exportData = ExportData(context)
         fetchConsentStatus(context)
@@ -188,6 +198,10 @@ class ClickioConsentSDK private constructor() {
         mode: DialogMode = DEFAULT
     ) {
         logger.log("openDialog called with mode $mode", level = EventLevel.INFO)
+        if (!isReady || consentStatus == null){
+            logger.log("ClickioSDK is not ready", level = EventLevel.INFO)
+            return
+        }
         if (consentStatus?.scope == null) {
             logger.log(
                 "Consent status is not loaded, possible reason: ${consentStatus?.error}",
@@ -420,8 +434,29 @@ class ClickioConsentSDK private constructor() {
      * @param context The application/activity context.
      */
     private fun openWebViewActivity(context: Context) {
+        if (!isNetworkAvailable(context)) {
+            logger.log(INTERNET_ERROR, EventLevel.ERROR)
+            return
+        }
         val intent = Intent(context, ClickioWebActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
     }
+
+    private fun isNetworkAvailable(context: Context): Boolean {
+        val connectivityManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val network = connectivityManager.activeNetwork ?: return false
+            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        } else {
+            @Suppress("DEPRECATION")
+            val networkInfo = connectivityManager.activeNetworkInfo
+            @Suppress("DEPRECATION")
+            networkInfo != null && networkInfo.isConnected
+        }
+    }
+
 }
