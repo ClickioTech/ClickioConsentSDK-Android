@@ -6,6 +6,7 @@
     <application>
         <activity
             android:name=".ClickioWebActivity"
+            android:configChanges="screenLayout|orientation|screenSize|keyboard|keyboardHidden|smallestScreenSize"
             android:exported="false"
             android:launchMode="singleTop"
             android:theme="@style/TransparentAppCompatTheme" />

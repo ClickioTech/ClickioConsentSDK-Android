@@ -2,6 +2,7 @@ package com.clickio.clickioconsentsdk
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
@@ -53,6 +54,11 @@ internal class ClickioWebActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         backPressedCallback.remove()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        webView?.invalidate()
     }
 
     @JavascriptInterface
