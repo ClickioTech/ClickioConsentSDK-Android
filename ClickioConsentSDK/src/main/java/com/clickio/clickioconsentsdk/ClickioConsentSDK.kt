@@ -453,8 +453,9 @@ class ClickioConsentSDK private constructor() {
             logger.log(INTERNET_ERROR, EventLevel.ERROR)
             return
         }
-        val intent = Intent(context, ClickioWebActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent = Intent(context, ClickioWebActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+        }
         context.startActivity(intent)
     }
 

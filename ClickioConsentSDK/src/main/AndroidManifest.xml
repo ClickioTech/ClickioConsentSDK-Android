@@ -6,10 +6,9 @@
     <application>
         <activity
             android:name=".ClickioWebActivity"
-            android:configChanges="screenLayout|orientation|screenSize|keyboard|keyboardHidden|smallestScreenSize"
+            android:configChanges="screenLayout|orientation|screenSize"
             android:exported="false"
-            android:launchMode="singleInstance"
-            android:theme="@style/TransparentAppCompatTheme" />
+            android:theme="@style/TransparentAppCompatTheme"/>
     </application>
 
 </manifest>
