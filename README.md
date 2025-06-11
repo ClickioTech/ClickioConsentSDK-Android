@@ -6,6 +6,7 @@
 - [ExportData](#exportdata)
 - [Integration with Third-Party Libraries for Google Consent Mode](#integration-with-third-party-libraries-for-google-consent-mode)
 - [Integration with Third-Party Libraries when Google Consent Mode is disabled](#integration-with-third-party-libraries-when-google-consent-mode-is-disabled)
+- [Delaying Ads Display until User Consent](#delaying-ads-display-until-user-consent)
 
 ## Requirements
 
@@ -34,7 +35,7 @@ Before integrating the SDK, ensure that your application meets the following req
 To integrate the SDK, add the following dependency to your project's `build.gradle` file:
 
 ```gradle
- implementation("com.clickio:clickioconsentsdk:1.0.0-rc5")
+ implementation("com.clickio:clickioconsentsdk:1.0.0-rc9")
 ```
 
 ## Quick Start
@@ -105,11 +106,22 @@ ClickioConsentSDK.getInstance().openDialog(
 
 ##### Parameters:
 
--   **`context`** – Requires an `Activity` or `Appilcation` context.
+-   **`context`** – Requires an `Activity` context.
 -   **`mode`** – Defines when the dialog should be shown. Possible values:
     -   `DialogMode.DEFAULT` – Opens the dialog if GDPR applies and user hasn't given consent.
     -   `DialogMode.RESURFACE` – Always forces dialog to open, regardless of the user’s jurisdiction, allowing users to modify settings for GDPR compliance or to opt out under US regulations.
 
+## `singleTask` Activity and Consent Dialog
+
+**If your Activity that calls `openDialog()` uses `launchMode="singleTask"`, make sure to call `openDialog()` again in `onNewIntent()`.**  
+Returning to the app (e.g., via the launcher icon) with `singleTask` launch mode can dismiss the SDK’s Activity that shows the Consent Dialog.
+
+```kotlin  
+override fun onNewIntent(intent: Intent?) {
+    super.onNewIntent(intent)
+    ClickioConsentSDK.getInstance().openDialog(context)
+}
+```
 ----------
 #### Consent Update Callback
 
@@ -423,3 +435,38 @@ with(ClickioConsentSDK.getInstance()){
 }
 ```
 [More about Consent Mode flags mapping with TCF and non-TCF purposes](https://docs.clickio.com/books/clickio-consent-cmp/page/google-consent-mode-v2-implementation#bkmrk-5.1.-tcf-mode)
+
+# Delaying Ads Display until User Consent
+
+Make sure that no ads are displayed in the app until `onReady` or `onConsentUpdated` callback is triggered **and** `checkConsentState() != GDPR_NO_DECISION` is confirmed. This ensures that ads are only shown after the user's consent status has been properly determined.
+
+**Note**: You should make sure yourself, as shown in the example, that the ad initialization function is not called multiple times.
+
+```kotlin  
+with(ClickioConsentSDK.getInstance()) {
+    onReady {
+        ClickioConsentSDK.getInstance().openDialog(context)
+
+        if (checkConsentState() != ClickioConsentSDK.ConsentState.GDPR_NO_DECISION) {
+            initAndShowAds()
+        }
+    }
+    onConsentUpdated {
+        if (checkConsentState() != ClickioConsentSDK.ConsentState.GDPR_NO_DECISION) {
+            initAndShowAds()
+        }
+    }
+}
+
+var adsStarted = false
+
+// Example of function that handles ads initialization and displaying
+fun initAndShowAds() {
+    if (!adsStarted) {
+        adsStarted = true
+        MobileAds.initialize(context) {
+            displayAd()
+        }
+    }
+} 
+```    

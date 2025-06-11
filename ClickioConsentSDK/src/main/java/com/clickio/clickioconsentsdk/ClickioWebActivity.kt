@@ -1,6 +1,8 @@
 package com.clickio.clickioconsentsdk
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
@@ -8,11 +10,15 @@ import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.drawable.toDrawable
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
@@ -48,6 +54,11 @@ internal class ClickioWebActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         backPressedCallback.remove()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        webView?.invalidate()
     }
 
     @JavascriptInterface
@@ -155,13 +166,44 @@ internal class ClickioWebActivity : AppCompatActivity() {
             BASE_CONSENT_URL.plus("sid=${config?.siteId}&lang=${config?.appLanguage}")
     }
 
+    private fun isInternalLink(url: String): Boolean {
+        return try {
+            val uri = url.toUri()
+            val host = uri.host ?: return false
+            host.endsWith("сlickio.com") || host.endsWith("clickiocmp.com")
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun configureWebView() {
         webView?.apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
+
             addJavascriptInterface(this@ClickioWebActivity, "clickioSDK")
             loadUrl(getConsentUrl())
+
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(
+                    view: WebView?,
+                    request: WebResourceRequest
+                ): Boolean = if (isInternalLink(request.url.toString())) {
+                    false
+                } else {
+                    view?.context?.startActivity(Intent(Intent.ACTION_VIEW, request.url))
+                    true
+                }
+
+                override fun onReceivedError(
+                    view: WebView, request: WebResourceRequest, error: WebResourceError
+                ) {
+                    super.onReceivedError(view, request, error)
+                    logger.log(INTERNET_ERROR, EventLevel.ERROR)
+                    finish()
+                }
+            }
         }
     }
 }
