@@ -347,7 +347,10 @@ data class GoogleConsentStatus(
     val analyticsStorageGranted: Boolean?,
     val adStorageGranted: Boolean?,
     val adUserDataGranted: Boolean?,
-    val adPersonalizationGranted: Boolean?
+    val adPersonalizationGranted: Boolean?,
+    val securityStorageGranted: Boolean?,
+    val personalizationStorageGranted: Boolean?,
+    val functionalityStorageGranted: Boolean?
 )
 ```
 Represents the status of Google Consent Mode.
@@ -356,6 +359,9 @@ Represents the status of Google Consent Mode.
 -   `adStorageGranted` — Consent for ad storage.
 -   `adUserDataGranted` — Consent for processing user data for ads.
 -   `adPersonalizationGranted` — Consent for ad personalization.
+-   `securityStorageGranted` — Consent for Security Storage.
+-   `personalizationStorageGranted` — Consent for Personalization Storage.
+-   `functionalityStorageGranted` — Consent for Functionality Storage.
 
 
 # Integration with Third-Party Libraries for Google Consent Mode
