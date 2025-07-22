@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
@@ -28,6 +29,7 @@ import org.json.JSONException
 import org.json.JSONObject
 
 private const val BASE_CONSENT_URL = "https://clickiocmp.com/t/static/consent_app.html?"
+internal const val CUSTOM_URL_KEY = "CUSTOM_URL_KEY"
 
 internal class ClickioWebActivity : AppCompatActivity() {
 
@@ -146,20 +148,41 @@ internal class ClickioWebActivity : AppCompatActivity() {
             }
             WindowInsetsCompat.CONSUMED
         }
+        val customUrl = intent.getStringExtra(CUSTOM_URL_KEY)
+        if (customUrl == null) {
+            webView = WebView(this).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                setBackgroundColor(Color.TRANSPARENT)
+                setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            }
+        } else {
+            val webViewConfig = ClickioConsentSDK.getInstance().getWebViewConfig()
 
-        webView = WebView(this).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            setBackgroundColor(Color.TRANSPARENT)
-            setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            webView = WebView(this).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    webViewConfig.width,
+                    webViewConfig.height
+                ).apply {
+                    gravity = when (webViewConfig.gravity) {
+                        WebViewGravity.TOP -> Gravity.TOP
+                        WebViewGravity.CENTER -> Gravity.CENTER
+                        WebViewGravity.BOTTOM -> Gravity.BOTTOM
+                    }
+                }
+                setBackgroundColor(webViewConfig.backgroundColor)
+                setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            }
         }
 
         rootLayout.addView(webView)
     }
 
     private fun getConsentUrl(): String {
+        val customUrl = intent.getStringExtra(CUSTOM_URL_KEY)
+        if (customUrl != null) return customUrl
         return if (config?.appLanguage.isNullOrEmpty())
             BASE_CONSENT_URL.plus("sid=${config?.siteId}")
         else
@@ -170,7 +193,9 @@ internal class ClickioWebActivity : AppCompatActivity() {
         return try {
             val uri = url.toUri()
             val host = uri.host ?: return false
-            host.endsWith("сlickio.com") || host.endsWith("clickiocmp.com")
+            val customUrl = intent.getStringExtra(CUSTOM_URL_KEY)?.toUri()
+            val customHost = customUrl?.host ?: host
+            host.endsWith("сlickio.com") || host.endsWith("clickiocmp.com") || host.endsWith(customHost)
         } catch (e: Exception) {
             false
         }

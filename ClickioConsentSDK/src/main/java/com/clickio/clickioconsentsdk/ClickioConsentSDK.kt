@@ -58,6 +58,7 @@ class ClickioConsentSDK private constructor() {
     private var onReadyListener: (() -> Unit)? = null
     private var consentStatus: ConsentStatus? = null
     private var exportData: ExportData? = null
+    private var webViewConfig: WebViewConfig = WebViewConfig()
 
     /**
      * Configuration data class.
@@ -236,11 +237,22 @@ class ClickioConsentSDK private constructor() {
         }
     }
 
+    fun webViewLoadUrl(
+        context: Context,
+        url: String,
+        webViewConfig: WebViewConfig = WebViewConfig()
+    ) {
+        this.webViewConfig = webViewConfig
+        openWebViewActivity(context, url)
+    }
+
     internal fun getConfig() = config
 
     internal fun getConsentUpdatedCallback() = onConsentUpdatedListener
 
     internal fun getLogger() = logger
+
+    internal fun getWebViewConfig() = webViewConfig
 
     internal fun updateConsentStatus() {
         consentStatus = consentStatus?.copy(force = false)
@@ -448,13 +460,14 @@ class ClickioConsentSDK private constructor() {
      * Opens the WebView activity for managing consent.
      * @param context The application/activity context.
      */
-    private fun openWebViewActivity(context: Context) {
+    private fun openWebViewActivity(context: Context, url: String? = null) {
         if (!isNetworkAvailable(context)) {
             logger.log(INTERNET_ERROR, EventLevel.ERROR)
             return
         }
         val intent = Intent(context, ClickioWebActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            url?.let { putExtra(CUSTOM_URL_KEY, url) }
         }
         context.startActivity(intent)
     }
