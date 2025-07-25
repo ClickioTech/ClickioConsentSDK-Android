@@ -1,6 +1,7 @@
 package com.clickio.clickioconsentsdk
 
 import android.annotation.SuppressLint
+import android.app.ComponentCaller
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
@@ -30,6 +31,7 @@ import org.json.JSONObject
 
 private const val BASE_CONSENT_URL = "https://clickiocmp.com/t/static/consent_app.html?"
 internal const val CUSTOM_URL_KEY = "CUSTOM_URL_KEY"
+internal const val CLOSE_KEY = "CLOSE_KEY"
 
 internal class ClickioWebActivity : AppCompatActivity() {
 
@@ -53,6 +55,13 @@ internal class ClickioWebActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, backPressedCallback)
     }
 
+    override fun onNewIntent(intent: Intent, caller: ComponentCaller) {
+        super.onNewIntent(intent, caller)
+        if (intent.getBooleanExtra(CLOSE_KEY, false)) {
+            finishAndClose()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         backPressedCallback.remove()
@@ -65,14 +74,16 @@ internal class ClickioWebActivity : AppCompatActivity() {
 
     @JavascriptInterface
     fun ready() {
-        Handler(Looper.getMainLooper()).post {
-            webView?.clearCache(true)
-            webView?.clearHistory()
-            logger.log("JS method [READY] was called", EventLevel.INFO)
-            ClickioConsentSDK.getInstance().updateConsentStatus()
-            if (isWriteCalled) consentUpdatedCallback?.invoke()
-            finish()
+        logger.log("JS method [READY] was called", EventLevel.INFO)
+        if (intent.getStringExtra(CUSTOM_URL_KEY) == null) {
+            finishAndClose()
         }
+    }
+
+    @JavascriptInterface
+    fun closeCustomWebView() {
+        logger.log("JS method [closeWebView] was called", EventLevel.INFO)
+        finishAndClose()
     }
 
     @JavascriptInterface
@@ -123,6 +134,17 @@ internal class ClickioWebActivity : AppCompatActivity() {
             }
         }
         return true
+    }
+
+    private fun finishAndClose() {
+        Handler(Looper.getMainLooper()).post {
+            webView?.clearCache(true)
+            webView?.clearHistory()
+
+            ClickioConsentSDK.getInstance().updateConsentStatus()
+            if (isWriteCalled) consentUpdatedCallback?.invoke()
+            finish()
+        }
     }
 
     private fun createTransparentViewWithWebView() {
@@ -193,9 +215,8 @@ internal class ClickioWebActivity : AppCompatActivity() {
         return try {
             val uri = url.toUri()
             val host = uri.host ?: return false
-            val customUrl = intent.getStringExtra(CUSTOM_URL_KEY)?.toUri()
-            val customHost = customUrl?.host ?: host
-            host.endsWith("сlickio.com") || host.endsWith("clickiocmp.com") || host.endsWith(customHost)
+            if (intent.getStringExtra(CUSTOM_URL_KEY) != null) return true
+            host.endsWith("сlickio.com") || host.endsWith("clickiocmp.com")
         } catch (e: Exception) {
             false
         }

@@ -246,6 +246,10 @@ class ClickioConsentSDK private constructor() {
         openWebViewActivity(context, url)
     }
 
+    fun closeCustomWebView(context: Context) {
+        closeWebViewActivity(context)
+    }
+
     internal fun getConfig() = config
 
     internal fun getConsentUpdatedCallback() = onConsentUpdatedListener
@@ -468,6 +472,14 @@ class ClickioConsentSDK private constructor() {
         val intent = Intent(context, ClickioWebActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
             url?.let { putExtra(CUSTOM_URL_KEY, url) }
+        }
+        context.startActivity(intent)
+    }
+
+    private fun closeWebViewActivity(context: Context) {
+        val intent = Intent(context, ClickioWebActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            putExtra(CLOSE_KEY, true)
         }
         context.startActivity(intent)
     }
