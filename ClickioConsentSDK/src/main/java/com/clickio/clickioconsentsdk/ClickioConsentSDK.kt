@@ -1,5 +1,6 @@
 package com.clickio.clickioconsentsdk
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -7,6 +8,10 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.view.Gravity
+import android.view.View
+import android.webkit.WebView
+import android.widget.FrameLayout
 import androidx.preference.PreferenceManager
 import co.ab180.airbridge.Airbridge
 import com.adjust.sdk.Adjust
@@ -192,7 +197,7 @@ class ClickioConsentSDK private constructor() {
 
     /**
      * Opens the consent dialog based on the specified mode.
-     * @param context Android context.
+     * @param context Android context from FragmentActivity of subclass.
      * @param mode The dialog mode.
      */
     fun openDialog(
@@ -237,17 +242,38 @@ class ClickioConsentSDK private constructor() {
         }
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     fun webViewLoadUrl(
         context: Context,
         url: String,
         webViewConfig: WebViewConfig = WebViewConfig()
-    ) {
-        this.webViewConfig = webViewConfig
-        openWebViewActivity(context, url)
-    }
+    ): WebView {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
 
-    fun closeCustomWebView(context: Context) {
-        closeWebViewActivity(context)
+        val customWebView = WebView(context).apply {
+
+            layoutParams = FrameLayout.LayoutParams(
+                webViewConfig.width,
+                webViewConfig.height
+            ).apply {
+                gravity = when (webViewConfig.gravity) {
+                    WebViewGravity.TOP -> Gravity.TOP
+                    WebViewGravity.CENTER -> Gravity.CENTER
+                    WebViewGravity.BOTTOM -> Gravity.BOTTOM
+                }
+            }
+            setBackgroundColor(webViewConfig.backgroundColor)
+            setLayerType(View.LAYER_TYPE_HARDWARE, null)
+
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+
+            val readAccess = OnlyReadAccess(sharedPreferences, logger)
+
+            addJavascriptInterface(readAccess, "clickioSDK")
+            loadUrl(url)
+        }
+        return customWebView
     }
 
     internal fun getConfig() = config
@@ -255,8 +281,6 @@ class ClickioConsentSDK private constructor() {
     internal fun getConsentUpdatedCallback() = onConsentUpdatedListener
 
     internal fun getLogger() = logger
-
-    internal fun getWebViewConfig() = webViewConfig
 
     internal fun updateConsentStatus() {
         consentStatus = consentStatus?.copy(force = false)
@@ -464,22 +488,13 @@ class ClickioConsentSDK private constructor() {
      * Opens the WebView activity for managing consent.
      * @param context The application/activity context.
      */
-    private fun openWebViewActivity(context: Context, url: String? = null) {
+    private fun openWebViewActivity(context: Context) {
         if (!isNetworkAvailable(context)) {
             logger.log(INTERNET_ERROR, EventLevel.ERROR)
             return
         }
         val intent = Intent(context, ClickioWebActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-            url?.let { putExtra(CUSTOM_URL_KEY, url) }
-        }
-        context.startActivity(intent)
-    }
-
-    private fun closeWebViewActivity(context: Context) {
-        val intent = Intent(context, ClickioWebActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-            putExtra(CLOSE_KEY, true)
         }
         context.startActivity(intent)
     }
@@ -508,5 +523,4 @@ class ClickioConsentSDK private constructor() {
             }
         }
     }
-
 }
