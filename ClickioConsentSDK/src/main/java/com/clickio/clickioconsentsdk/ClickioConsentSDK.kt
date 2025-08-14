@@ -11,6 +11,7 @@ import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.preference.PreferenceManager
 import co.ab180.airbridge.Airbridge
@@ -264,6 +265,10 @@ class ClickioConsentSDK private constructor() {
             }
             setBackgroundColor(webViewConfig.backgroundColor)
             setLayerType(View.LAYER_TYPE_HARDWARE, null)
+
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean = false
+            }
 
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
