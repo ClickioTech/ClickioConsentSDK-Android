@@ -7,6 +7,7 @@
 - [Integration with Third-Party Libraries for Google Consent Mode](#integration-with-third-party-libraries-for-google-consent-mode)
 - [Integration with Third-Party Libraries when Google Consent Mode is disabled](#integration-with-third-party-libraries-when-google-consent-mode-is-disabled)
 - [Delaying Ads Display until User Consent](#delaying-ads-display-until-user-consent)
+- [WebView Consent Synchronization](#webview-consent-synchronization)
 
 ## Requirements
 
@@ -476,3 +477,60 @@ fun initAndShowAds() {
     }
 } 
 ```    
+# WebView Consent Synchronization
+
+When an Android app contains both **native content** (built with Kotlin/Java) and **web content** inside a `WebView` (e.g., embedded websites or widgets), there’s a risk that the Consent Management Platform (CMP) dialog may appear twice — once in the native UI and again in the `WebView`.
+
+The `webViewLoadUrl` method helps **synchronize consent** between native and web layers.  
+It creates and returns a configured `WebView` to handle saved consent, which you can then embed into your app screens as needed. You can also customize the appearance through the `WebViewConfig` configuration class.
+
+**Tip:**
+Use this method whenever you need to display web content that must respect the user’s consent settings already established in the native part of your app. This ensures a seamless experience and prevents duplicate consent prompts.
+
+```kotlin
+fun webViewLoadUrl(context: Context, url: String, webViewConfig: WebViewConfig): WebView
+```
+
+### Configuration
+```kotlin  
+data class WebViewConfig(
+    val backgroundColor: Int // Default: 0 (transparent)
+    val height: Int       // px; Default: -1( Match Parent)
+    val width: Int         // px; Default: -1 (Match Parent)
+    val gravity: WebViewGravity // Default: CENTER (Gravity if appliable)
+)
+
+enum class WebViewGravity {
+    TOP, CENTER, BOTTOM
+}
+```
+
+### Intregration examples
+
+#### View Example
+```kotlin 
+val myWebView = ClickioConsentSDK.getInstance().webViewLoadUrl(
+    context = context,
+    url = "https://example.com",
+    webViewConfig = WebViewConfig(
+        backgroundColor = android.graphics.Color.WHITE,
+        height = 600,
+        gravity = WebViewGravity.BOTTOM
+    )
+)   
+
+binding.root.addView(myWebView)
+``` 
+
+#### Compose Example
+```kotlin 
+val myWebView = remember {
+    ClickioConsentSDK.getInstance().webViewLoadUrl(
+        context = context,
+        url = "https://example.com"
+    )
+}
+Box(modifier = Modifier.fillMaxSize()) {
+    AndroidView(factory = { myWebView })
+}
+```

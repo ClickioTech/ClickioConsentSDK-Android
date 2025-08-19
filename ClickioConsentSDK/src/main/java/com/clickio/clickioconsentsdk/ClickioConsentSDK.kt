@@ -64,7 +64,6 @@ class ClickioConsentSDK private constructor() {
     private var onReadyListener: (() -> Unit)? = null
     private var consentStatus: ConsentStatus? = null
     private var exportData: ExportData? = null
-    private var webViewConfig: WebViewConfig = WebViewConfig()
 
     /**
      * Configuration data class.
@@ -198,7 +197,7 @@ class ClickioConsentSDK private constructor() {
 
     /**
      * Opens the consent dialog based on the specified mode.
-     * @param context Android context from FragmentActivity of subclass.
+     * @param context Android context from Activity of subclass.
      * @param mode The dialog mode.
      */
     fun openDialog(
@@ -243,6 +242,12 @@ class ClickioConsentSDK private constructor() {
         }
     }
 
+    /**
+     * Creates and returns a configured WebView to handle saved consent.
+     * @param context Android context from current Activity
+     * @param url yours site url
+     * @param webViewConfig optional webview configuration
+     */
     @SuppressLint("SetJavaScriptEnabled")
     fun webViewLoadUrl(
         context: Context,
