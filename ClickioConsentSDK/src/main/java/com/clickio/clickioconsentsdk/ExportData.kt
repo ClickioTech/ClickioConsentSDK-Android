@@ -48,14 +48,30 @@ class ExportData(context: Context) {
             sharedPreferences.getString("CLICKIO_CONSENT_GOOGLE_ANALYTICS_adUserData", null)
         val adPersonalizationString =
             sharedPreferences.getString("CLICKIO_CONSENT_GOOGLE_ANALYTICS_adPersonalization", null)
+        val securityStorageString =
+            sharedPreferences.getString("CLICKIO_CONSENT_GOOGLE_ANALYTICS_securityStorage", null)
+        val personalizationStorageString =
+            sharedPreferences.getString("CLICKIO_CONSENT_GOOGLE_ANALYTICS_personalizationStorage", null)
+        val functionalityStorageString =
+            sharedPreferences.getString("CLICKIO_CONSENT_GOOGLE_ANALYTICS_functionalityStorage", null)
 
-        if (adStorageString.isNullOrEmpty() && analyticsStorageString.isNullOrEmpty() && adUserDataString.isNullOrEmpty() && adPersonalizationString.isNullOrEmpty()) return null
+        if (adStorageString.isNullOrEmpty() &&
+            analyticsStorageString.isNullOrEmpty() &&
+            adUserDataString.isNullOrEmpty() &&
+            adPersonalizationString.isNullOrEmpty() &&
+            securityStorageString.isNullOrEmpty() &&
+            personalizationStorageString.isNullOrEmpty() &&
+            functionalityStorageString.isNullOrEmpty()
+        ) return null
 
         return GoogleConsentStatus(
             adStorageGranted = adStorageString == GRANTED,
             analyticsStorageGranted = analyticsStorageString == GRANTED,
             adUserDataGranted = adUserDataString == GRANTED,
-            adPersonalizationGranted = adPersonalizationString == GRANTED
+            adPersonalizationGranted = adPersonalizationString == GRANTED,
+            securityStorageGranted = securityStorageString == GRANTED,
+            personalizationStorageGranted = personalizationStorageString == GRANTED,
+            functionalityStorageGranted = functionalityStorageString == GRANTED
         )
     }
 
@@ -142,5 +158,8 @@ data class GoogleConsentStatus(
     val analyticsStorageGranted: Boolean?,
     val adStorageGranted: Boolean?,
     val adUserDataGranted: Boolean?,
-    val adPersonalizationGranted: Boolean?
+    val adPersonalizationGranted: Boolean?,
+    val securityStorageGranted: Boolean?,
+    val personalizationStorageGranted: Boolean?,
+    val functionalityStorageGranted: Boolean?
 )
