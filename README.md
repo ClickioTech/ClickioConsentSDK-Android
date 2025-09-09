@@ -507,6 +507,8 @@ enum class WebViewGravity {
 
 ### Intregration examples
 
+**Note:** Use standard platform methods to add/remove the WebView (`addView()` / `removeView()` in View, or state-based visibility in Compose). For permanent disposal, calling `removeAllViews()` and `destroy()` is recommended.
+
 #### View Example
 ```kotlin 
 val myWebView = ClickioConsentSDK.getInstance().webViewLoadUrl(
@@ -520,17 +522,40 @@ val myWebView = ClickioConsentSDK.getInstance().webViewLoadUrl(
 )   
 
 binding.root.addView(myWebView)
+
+// Removing WebView by button click
+binding.closeButton.setOnClickListener {
+    binding.root.removeView(myWebView)
+    myWebView.removeAllViews()
+    myWebView.destroy()
+}
 ``` 
 
 #### Compose Example
 ```kotlin 
-val myWebView = remember {
-    ClickioConsentSDK.getInstance().webViewLoadUrl(
-        context = context,
-        url = "https://example.com"
-    )
-}
-Box(modifier = Modifier.fillMaxSize()) {
-    AndroidView(factory = { myWebView })
+var showWebView by remember { mutableStateOf(true) }
+
+if (showWebView) {
+    val myWebView = remember {
+        ClickioConsentSDK.getInstance().webViewLoadUrl(
+            context = context,
+            url = "https://example.com"
+        )
+    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        AndroidView(factory = { myWebView })
+        
+        // Removing WebView by button click
+        Button(
+            modifier = Modifier.align(Alignment.TopEnd),
+            onClick = { 
+                showWebView = false
+                myWebView.removeAllViews()
+                myWebView.destroy()
+            }
+        ) {
+            Text("Close")
+        }
+    }
 }
 ```
