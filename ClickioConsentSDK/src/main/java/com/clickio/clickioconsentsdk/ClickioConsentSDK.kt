@@ -278,9 +278,9 @@ class ClickioConsentSDK private constructor() {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
 
-            val readAccess = OnlyReadAccess(sharedPreferences, logger)
+            val readWriteAccess = OnlyReadAndWriteAccess(sharedPreferences, logger)
 
-            addJavascriptInterface(readAccess, "clickioSDK")
+            addJavascriptInterface(readWriteAccess, "clickioSDK")
             loadUrl(url)
         }
         return customWebView
