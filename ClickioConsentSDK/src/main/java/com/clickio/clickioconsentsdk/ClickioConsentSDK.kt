@@ -21,9 +21,9 @@ import com.appsflyer.AppsFlyerConsent
 import com.appsflyer.AppsFlyerLib
 import com.clickio.clickioconsentsdk.ClickioConsentSDK.DialogMode.DEFAULT
 import com.clickio.clickioconsentsdk.ClickioConsentSDK.DialogMode.RESURFACE
+import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
-import com.google.firebase.analytics.ktx.analytics
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.analytics.analytics
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -332,7 +332,7 @@ class ClickioConsentSDK private constructor() {
                 )
             )
             logger.log("Successful finished setting consent to Firebase", EventLevel.INFO)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             logger.log("Failed setting consent to Firebase: $e", EventLevel.ERROR)
         }
     }
